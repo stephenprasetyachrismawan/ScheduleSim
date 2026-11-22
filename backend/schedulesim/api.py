@@ -31,6 +31,22 @@ VALIDATION_SEEDS = [5000, 5001]
 
 
 # ---------------------------------------------------------------------- helpers
+def claim(measures: dict) -> str:
+    """Claim sentence of ``docs/KUNCI_UJI.md`` section 7 from the 98.75% intervals.
+
+    "lebih baik" only when both measures lie entirely below 0, "lebih buruk" only when both
+    lie entirely above 0, otherwise "tidak ditemukan selisih yang tegas".
+    """
+    lows = [measures[m][1] for m in ("uk1", "uk2")]
+    highs = [measures[m][2] for m in ("uk1", "uk2")]
+    if all(h < 0 for h in highs):
+        return "lebih baik"
+    if all(lo > 0 for lo in lows):
+        return "lebih buruk"
+    return "tidak ditemukan selisih yang tegas"
+
+
+
 def _finite(value):
     """JSON has no NaN or infinity; show them as null."""
     if isinstance(value, float):
@@ -87,6 +103,9 @@ def _model_status() -> tuple[list[dict], bool]:
 
 
 def _submodule_commit() -> str | None:
+    """Commit of the pinned arls-ppo checkout (``ARLS_PPO_COMMIT`` inside Docker)."""
+    if os.environ.get("ARLS_PPO_COMMIT"):
+        return os.environ["ARLS_PPO_COMMIT"][:12]
     head = ROOT / ".git" / "modules" / "vendor" / "arls-ppo" / "HEAD"
     try:
         return head.read_text().strip()[:12]
@@ -355,7 +374,8 @@ def create_app(data_dir: str | Path | None = None, workers: int | None = None,
             f = GENERATED / f"{name}.json"
             if f.exists():
                 extra[name.removeprefix("bab5_uji_")] = json.loads(f.read_text(encoding="utf-8"))
-        return {"main": ringkas["utama"], "combined": ringkas["gabungan"],
+        claims = {m: {lam: claim(v) for lam, v in per.items()} for m, per in ringkas["utama"].items()}
+        return {"main": ringkas["utama"], "claims": claims, "combined": ringkas["gabungan"],
                 "benchmark_only": ringkas["benchmark_saja"], "item1": ringkas["butir1"],
                 "stability": ringkas["stabil"], "time": ringkas["waktu"],
                 "violations": ringkas["pelanggaran"], **extra,

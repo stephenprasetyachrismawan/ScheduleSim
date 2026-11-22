@@ -144,3 +144,7 @@ def test_test_results_are_served_read_only(client):
     r = client.get("/api/results").json()
     assert r["main"]["acak_g"]["0.3"]["uk1"][0] == pytest.approx(-24.0119, abs=1e-3)
     assert r["violations"]["ppo_bc_ppo_g"]["keras"] == 0
+    # the four claims of the thesis (Chapter V, test lock section 7)
+    assert r["claims"]["acak_g"] == {"0.3": "lebih baik", "3.0": "lebih baik"}
+    assert r["claims"]["fix3_g"] == {"0.3": "tidak ditemukan selisih yang tegas",
+                                     "3.0": "tidak ditemukan selisih yang tegas"}
