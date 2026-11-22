@@ -1,0 +1,56 @@
+/* ScheduleSim design tokens. Own palette (no third-party product colours or icons). */
+:root {
+  --font-ui: "Geist", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  --ink: #1d2433;
+  --ink-2: #48556b;
+  --ink-3: #6f7b8f;
+  --ink-4: #98a2b3;
+  --canvas: #ffffff;
+  --surface: #f4f5f7;
+  --surface-2: #ebedf0;
+  --hover: #eef0f3;
+  --line: #dfe2e7;
+  --line-strong: #c6cbd3;
+
+  --primary: #1d5bd8;
+  --primary-hover: #174bb5;
+  --primary-soft: #e8effd;
+  --primary-ink: #133f99;
+  --focus: #4c8dff;
+
+  --danger: #c2341b;
+  --danger-soft: #fde8e3;
+  --warning: #b86e00;
+  --warning-soft: #fff3dc;
+  --success: #17663f;
+  --success-soft: #def3e7;
+
+  /* status lozenges */
+  --st-todo-bg: #e9ebef;   --st-todo-fg: #3e4a5e;
+  --st-prog-bg: #dce8ff;   --st-prog-fg: #1747a6;
+  --st-done-bg: #ddf4e8;   --st-done-fg: #17663f;
+  --st-reop-bg: #fde4de;   --st-reop-fg: #a8321a;
+
+  /* repair ladder levels (the signature): L0 keep AOR .. L3 partial rescheduling */
+  --lv0: #8a94a6;
+  --lv1: #129fb0;
+  --lv2: #e39b12;
+  --lv3: #7b5bd6;
+
+  /* epic palette */
+  --ep0: #5b7ff0; --ep1: #ef8a3c; --ep2: #2a9d63; --ep3: #e25563;
+  --ep4: #9a5bd9; --ep5: #2b93c9; --ep6: #c9a227; --ep7: #3fb6c9;
+  --ep8: #c45fa8; --ep9: #5f8f3e; --ep10: #d9776a; --ep11: #7d8796;
+  --ep-unplanned: #c2341b;
+
+  --radius-s: 3px;
+  --radius: 5px;
+  --radius-l: 8px;
+  --shadow-card: 0 1px 1px rgba(23, 32, 51, 0.12), 0 0 1px rgba(23, 32, 51, 0.18);
+  --shadow-pop: 0 8px 24px rgba(23, 32, 51, 0.16), 0 0 1px rgba(23, 32, 51, 0.24);
+
+  --topbar-h: 52px;
+  --sidebar-w: 236px;
+}
