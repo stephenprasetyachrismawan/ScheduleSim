@@ -1,0 +1,14 @@
+services:
+  schedulesim:
+    build:
+      context: .
+      args:
+        ARLS_PPO_COMMIT: ${ARLS_PPO_COMMIT:-}
+    ports:
+      - "8000:8000"
+    environment:
+      SCHEDULESIM_WORKERS: "4"
+    volumes:
+      - schedulesim-data:/data
+volumes:
+  schedulesim-data: {}
