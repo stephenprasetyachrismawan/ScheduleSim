@@ -1,0 +1,25 @@
+{
+  "key": "KOPI",
+  "name": "Kedai kopi digital (contoh fiktif)",
+  "developers": [{"name": "Rina (backend)"}, {"name": "Bayu (fullstack)"},
+                 {"name": "Sari (frontend)"}, {"name": "Dedi (mobile dan QA)"}],
+  "epics": [
+    {"name": "Akun dan login", "issues": [
+      {"summary": "API akun dan sesi", "efforts": {"0": 6, "2": 8}},
+      {"summary": "Halaman daftar dan masuk", "efforts": {"1": 5}},
+      {"summary": "Pemulihan kata sandi", "efforts": {"0": 4, "2": 5}}]},
+    {"name": "Menu dan pesanan", "issues": [
+      {"summary": "Katalog menu", "efforts": {"1": 6, "2": 7}},
+      {"summary": "Keranjang pesanan", "efforts": {"1": 4}},
+      {"summary": "Uji pesanan", "efforts": {"1": 3, "3": 4}}]},
+    {"name": "Pembayaran", "issues": [
+      {"summary": "Integrasi QRIS", "efforts": {"0": 7}},
+      {"summary": "Dasbor transaksi", "efforts": {"0": 5, "2": 6}},
+      {"summary": "Uji pembayaran", "efforts": {"3": 3}},
+      {"summary": "Halaman struk", "efforts": {"1": 4, "2": 5}}]},
+    {"name": "Notifikasi", "issues": [
+      {"summary": "Notifikasi push", "efforts": {"1": 5, "3": 6}},
+      {"summary": "Uji notifikasi di ponsel", "efforts": {"3": 3}}]}
+  ],
+  "links": []
+}
