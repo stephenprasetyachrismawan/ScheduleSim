@@ -1,0 +1,25 @@
+{
+  "key": "TOKO",
+  "name": "Toko daring (contoh fiktif)",
+  "developers": [{"name": "Ayu (backend)"}, {"name": "Budi (backend)"},
+                 {"name": "Citra (frontend)"}, {"name": "Dimas (QA)"}],
+  "epics": [
+    {"name": "Login", "issues": [
+      {"summary": "Rancang API", "efforts": {"0": 3, "1": 4}},
+      {"summary": "Halaman masuk", "efforts": {"2": 3}},
+      {"summary": "Uji login", "efforts": {"3": 2, "2": 3}}]},
+    {"name": "Katalog", "issues": [
+      {"summary": "Basis data produk", "efforts": {"1": 4, "0": 5}},
+      {"summary": "Halaman katalog", "efforts": {"2": 5}},
+      {"summary": "Uji katalog", "efforts": {"3": 2}}]},
+    {"name": "Keranjang", "issues": [
+      {"summary": "Logika keranjang", "efforts": {"0": 4, "1": 4}},
+      {"summary": "Tampilan keranjang", "efforts": {"2": 4}},
+      {"summary": "Uji keranjang", "efforts": {"3": 3}}]},
+    {"name": "Pembayaran", "issues": [
+      {"summary": "Integrasi gerbang bayar", "efforts": {"1": 6, "0": 7}},
+      {"summary": "Halaman bayar", "efforts": {"2": 3}},
+      {"summary": "Uji pembayaran", "efforts": {"3": 3, "2": 4}}]}
+  ],
+  "links": [{"from": [0, 0], "to": [3, 0]}, {"from": [2, 0], "to": [3, 1]}]
+}
