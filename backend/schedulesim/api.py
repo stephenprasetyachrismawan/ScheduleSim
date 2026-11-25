@@ -282,6 +282,16 @@ def create_app(data_dir: str | Path | None = None, workers: int | None = None,
                 "issues": issues_at(p, tasks, initial["entries"]),
                 "spec": source if isinstance(source, dict) else None}
 
+    @app.get("/api/projects/{key}/master")
+    def project_master(key: str):
+        """Every task of the project back to the line of the raw file (or spec) it came from."""
+        from .master import master_of
+
+        e, source = entry(key)
+        out = master_of(source, commit=_submodule_commit())
+        return {"project": {"key": e.key, "name": e.name, "group": e.group,
+                            "instance": e.source}, **out}
+
     def _check_spec(spec: dict) -> str:
         from arls_ppo import custom
 
