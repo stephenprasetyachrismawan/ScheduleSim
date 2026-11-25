@@ -11,7 +11,7 @@ number comes from the thesis code and the locked models in
 
 Coba langsung di **https://sch.stevewithcode.net**.
 
-![Simulasi: timeline, strip kejadian, dan panel keputusan](docs/tangkapan/06_sim_gantt.png)
+![Form kejadian: breadcrumb, pager, tiga langkah, angka dengan asalnya, dan jadwal](docs/tangkapan/06_sim_event.png)
 
 ## Selaras dengan tesis
 
@@ -77,22 +77,40 @@ ScheduleSim tidak punya logika penjadwalan sendiri. Backend memanggil `arls_ppo`
   Setiap pelajaran ditutup dengan soal yang memberi umpan balik tanpa langsung membuka jawaban. Semua contoh memakai
   proyek fiktif Kedai kopi yang dijalankan dengan kode penelitian, jadi angkanya diambil dari run itu, bukan diketik
   tangan. Kemajuan belajar disimpan di browser.
-- **Simulasi gangguan.** Tombol putar menjalankan episode langkah demi langkah (① → ② → ③ untuk setiap
-  kejadian). Kecepatannya bisa dipilih dari sangat pelan sampai cepat. Kotak *Perhatikan* menandai tugas yang
-  terkena gangguan di langkah ② dan tugas yang diubah di langkah ③. Di atas jadwal ada panel yang menyebut apa yang sedang tampil: kejadian mana,
-  jadwal metode mana (tombol per metode berisi tingkat yang dipakai, U, dan Tard/E pada kejadian itu),
-  dan langkah mana: ① sebelum gangguan, ② gangguan masuk (tugas yang terkena digeser seperlunya, belum
-  diperbaiki; di naskah disebut tingkat 0 atau AOR), ③ sesudah perbaikan oleh metode itu. Metode
-  pembanding AOR ditulis "AOR (tanpa perbaikan)" karena ia berhenti di langkah ②. Cara pakai: pilih
-  proyek, kapasitas, intensitas, seed, λ, dan metode, lalu tekan Jalankan. Strip kejadian menampilkan
-  tingkat perbaikan yang dipakai metode terpilih (glyph tangga L0-L3). Panel keputusan menampilkan:
-  - A_j;
-  - peluang tiap tingkat dari kebijakan;
-  - J tiap tingkat;
-  - putusan guard;
-  - 38 angka keadaan;
-  - perubahan yang dihitung.
-- **Log hitung.** Tab di samping panel keputusan menguraikan dari mana setiap angka berasal:
+- **Simulasi gangguan, dengan pola Odoo.** Setiap layar memuat satu rekaman, dan alamatnya menyimpan
+  semua pengaturan. Muat ulang, tombol Back, dan tautan yang dibagikan selalu kembali ke rekaman yang sama.
+  Bila server sudah lupa run itu, misalnya sesudah restart, halaman mengirim pengaturan yang sama lagi dan
+  hasilnya langsung diambil dari cache. Rekaman bertingkat:
+  - **Run**: proyek, kapasitas, intensitas, seed, dan λ, dengan tab Metode (J episode semua metode), tab
+    Gangguan (sama untuk semua metode), dan tab Input episode (S0, tenggat, E, kapasitas);
+  - **Metode dalam run**: daftar kejadian satu per baris, ditutup baris *Akhir episode*, dan semua perubahan;
+  - **Kejadian**: pager `3 / 16` yang hanya memindah kejadian metode itu. Statusbar ① sebelum gangguan →
+    ② gangguan masuk (belum diperbaiki; di naskah tingkat 0 atau AOR) → ③ sesudah perbaikan. Tombol
+    *Bandingkan metode lain* membuka kejadian yang sama untuk metode lain. Tab yang tersedia: Jadwal,
+    Gangguan, Keputusan, Perubahan, dan Log hitung. Tombol putar berjalan ① → ② → ③ dengan kecepatan yang
+    bisa dipilih, dan kotak *Perhatikan* menandai tugas yang perlu dilihat;
+  - **Akhir episode**: jadwal sesudah kejadian terakhir sampai semua tugas selesai (garis hijau di
+    Timeline), Tard/E akhir, ΣU, dan J episode.
+
+  Breadcrumb `Simulasi / run / metode / kejadian` selalu bisa diklik untuk naik.
+- **Asal angka (↗).** Tanda ↗ di samping angka membuka lembar samping yang memuat:
+  - rumusnya;
+  - angka yang masuk, masing-masing bisa dibuka lebih dalam;
+  - daftar yang dijumlah, dengan baris Σ di bawahnya, misalnya 55 tugas untuk E;
+  - kode yang menghitungnya.
+
+  Semua angka di lembar itu dibaca dari log angka arls-ppo dan tidak dihitung ulang di browser.
+- **Data master sampai berkas mentah.** Setiap tugas punya form sendiri. Isinya:
+  - nomor di layar (MK01-56) dan id di kode dan naskah (55);
+  - job dan urutan operasinya;
+  - pengembang yang layak beserta upayanya;
+  - dependensinya;
+  - letaknya di berkas mentah, misalnya `data/raw/MK01.json → jobs[0][0]` beserta isinya apa adanya.
+
+  Tugas tidak terencana menunjuk gangguan yang membuatnya. Proyek, pengembang, dan job juga punya form
+  sendiri. Endpoint `GET /api/projects/{key}/master` membaca berkas itu lewat loader yang sama dengan
+  episode tesis.
+- **Log hitung.** Tab di form kejadian yang menguraikan dari mana setiap angka berasal:
   - *Input*: kapasitas, S0 (dibangun ulang dari berkas instans dan dicek sama), tenggat
     d_i = C_i + 0,5 × (C_i − S_i), E sebagai jumlah dibagi banyak tugas, seed gangguan, parameter TAWOS,
     dan daftar gangguan yang ditarik ulang dari seed lalu dicek sama;
@@ -108,8 +126,8 @@ ScheduleSim tidak punya logika penjadwalan sendiri. Backend memanggil `arls_ppo`
   membandingkan semua angkanya; hanya waktu (ms) yang boleh berbeda. Log bisa disalin sebagai teks
   atau diunduh sebagai JSON.
 - **Mode belajar.** Tombol di bilah atas, mati secara bawaan. Bila dinyalakan, tanda ⓘ di samping
-  istilah dan angka membuka penjelasan singkat beserta rumus dan subbab naskahnya, dan halaman
-  Simulasi punya tur sembilan langkah. Halaman *Istilah* memuat semua penjelasan itu.
+  istilah dan angka membuka penjelasan singkat beserta rumus dan subbab naskahnya, dan form
+  kejadian punya tur tujuh langkah. Halaman *Istilah* memuat semua penjelasan itu.
 - **Manual.** Ada dua mode, dan keduanya dibandingkan dengan ARLS-PPO dan AOR pada gangguan yang sama:
   - *pilih tingkat*: Anda memilih L0-L3 untuk setiap gangguan;
   - *geser kartu*: Anda menggeser kartu di Board. Setiap geseran diperiksa dengan aturan
@@ -125,15 +143,17 @@ ScheduleSim tidak punya logika penjadwalan sendiri. Backend memanggil `arls_ppo`
   - indikator I-1 dan I-2;
   - tabel hash model.
 
-| Board | Form | Hasil uji |
+| Run | Metode dalam run | Bandingkan metode lain |
 |---|---|---|
-| ![Board](docs/tangkapan/02_board.png) | ![Form](docs/tangkapan/05_form.png) | ![Hasil uji](docs/tangkapan/08_results.png) |
+| ![Run](docs/tangkapan/11_run.png) | ![Metode dalam run](docs/tangkapan/12_method_run.png) | ![Bandingkan](docs/tangkapan/13_banding.png) |
 
-| Log hitung | J setiap tingkat dan LIS | Tur Mode belajar |
+| Asal angka | Akhir episode | Tugas MK01-56 = id 55 |
 |---|---|---|
-| ![Log hitung](docs/tangkapan/10_log_proses.png) | ![J setiap tingkat](docs/tangkapan/11_log_tingkat.png) | ![Tur](docs/tangkapan/12_tur.png) |
+| ![Asal angka](docs/tangkapan/16_asal_angka.png) | ![Akhir episode](docs/tangkapan/17_akhir.png) | ![Tugas 55](docs/tangkapan/18_tugas_55.png) |
 
-![Pilih metode dan langkah pada satu kejadian](docs/tangkapan/13_pilih_metode.png)
+| Form tugas dan berkas mentah | Log hitung | Hasil uji |
+|---|---|---|
+| ![Tugas](docs/tangkapan/05_task.png) | ![Log hitung](docs/tangkapan/10_log_proses.png) | ![Hasil uji](docs/tangkapan/08_results.png) |
 
 | Belajar dari nol | Satu langkah pelajaran |
 |---|---|
@@ -178,7 +198,7 @@ Pengaturan lewat variabel lingkungan:
 cd backend && .venv/bin/python -m pytest          # proyeksi, API, jejak episode nyata
 cd frontend && npm run dev                        # Vite di :5173, proxy /api ke :8000
 cd frontend && npm test                           # filter, isi pelajaran terhadap data run contoh
-cd e2e && npx playwright test                     # empat view, simulasi, log hitung, Mode belajar
+cd e2e && npx playwright test                     # view proyek, rekaman simulasi, asal angka, log hitung, belajar
 cd e2e && SCHEDULESIM_PORT=8010 npx playwright test  # terhadap server kedua di port lain
 ```
 
@@ -188,7 +208,7 @@ Struktur:
 |---|---|
 | `vendor/arls-ppo` | submodule kode, model, dan hasil tesis (dikunci per commit) |
 | `backend/schedulesim` | `projection` (tesis ke konsep PM), `runner` (proses pekerja dan cache), `api` (FastAPI), `catalog`, `store` |
-| `frontend/src` | React + TypeScript: `components/views` (List, Board, Form, Gantt), `pages` (Simulasi, Hasil uji, Metode, editor proyek) |
+| `frontend/src` | React + TypeScript: `odoo` (breadcrumb, pager, statusbar, smart button, notebook, Asal angka), `pages/sim` (run, metode, kejadian, akhir), `pages/master` (proyek, tugas, pengembang, job), `components/views` (List, Board, Gantt) |
 | `e2e` | tes Playwright dan skrip tangkapan layar |
 
 Tampilan bergaya alat manajemen proyek pada umumnya. Komponen, ikon, warna, dan nama ScheduleSim
