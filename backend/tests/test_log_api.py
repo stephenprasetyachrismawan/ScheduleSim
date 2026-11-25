@@ -129,3 +129,16 @@ def test_pages_answer_head_requests_too(client):
         pytest.skip("frontend not built")
     assert client.head("/").status_code == 200
     assert client.head("/simulasi").status_code == 200
+
+
+def test_a_cached_run_is_served_even_while_the_visitor_has_two_runs_running(public):
+    ip = {"CF-Connecting-IP": "203.0.113.8"}
+    cheap = {**JOB, "methods": [{"method": "aor"}]}
+    first = public.post("/api/runs", json=cheap, headers=ip).json()
+    assert _wait(public, first["run_id"])["status"] == "done"          # now cached
+    heavy = {**JOB, "project": "MK10", "methods": [{"method": "seq"}]}
+    for s in (5000, 5001):
+        assert public.post("/api/runs", json={**heavy, "seed": s}, headers=ip).status_code == 202
+    again = public.post("/api/runs", json=cheap, headers=ip)
+    assert again.status_code == 202
+    assert _wait(public, again.json()["run_id"])["status"] == "done"

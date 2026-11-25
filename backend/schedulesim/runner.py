@@ -136,14 +136,20 @@ class Runner:
             p.terminate()
 
     def _admit(self, client, n_new):
-        """Refuse a run when the visitor or the server is busy (public site only)."""
+        """Refuse a run when the visitor or the server is busy (public site only).
+
+        A run that only needs cached traces (``n_new == 0``) finishes at once, so it is never
+        refused.
+        """
+        if not n_new:
+            return
         if self.max_runs_per_client is not None and client is not None:
             mine = sum(1 for r in self._runs.values()
                        if r["status"] == "running" and r.get("client") == client)
             if mine >= self.max_runs_per_client:
                 raise RunLimit(f"Anda masih punya {mine} simulasi yang berjalan. Tunggu sampai "
                                "selesai, lalu coba lagi.")
-        if self.max_pending is not None and n_new and self._pending + n_new > self.max_pending:
+        if self.max_pending is not None and self._pending + n_new > self.max_pending:
             raise RunLimit("Server sedang menjalankan banyak simulasi dari pengunjung lain. "
                            "Coba lagi sebentar lagi; hasil yang sudah pernah dihitung tetap "
                            "langsung tampil.")
