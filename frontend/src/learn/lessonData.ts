@@ -1,6 +1,7 @@
 // The one example every lesson uses: the fictional "Kedai kopi digital" project (12 tasks,
 // 4 developers), run with the thesis code at capacity 1.5, intensity 0.15, validation seed
 // 5000 and λ = 3. All numbers in the lessons are read from this run, never typed by hand.
+import { defaultSpec, specQuery } from "../odoo/runUrl";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { api } from "../api";
 import type { EpisodeLog, EventLog, EventSummary, MethodSummary } from "../types";
@@ -12,6 +13,8 @@ export const SCENARIO = {
 };
 export const PPO = "ppo_bc_ppo_g@0";
 export const METHOD_KEYS = [PPO, "aor", "seq", "fix3_g", "acak_g"];
+/** The same example run, opened as a record in Simulasi. */
+export const KOPI_RUN = `/simulasi/run?${specQuery({ ...defaultSpec("KOPI", 1.5), m: METHOD_KEYS })}`;
 /** Events of the PPO run whose full log the lessons read. */
 export const LOGGED_EVENTS = [0, 1, 3];
 

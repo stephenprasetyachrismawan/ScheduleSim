@@ -408,3 +408,23 @@ export interface RerunResult {
   n_differences?: number;
   seconds: number;
 }
+
+// ------------------------------------------------------------------ master data (seam B7)
+export interface MasterTask {
+  id: number;
+  job: number;
+  op: number;
+  pointer: string;                       // "jobs[9][3]" or "epics[1].issues[2]"
+  raw: unknown;                          // the options exactly as written in the file or spec
+  eligible: Record<string, number>;      // developer id -> effort (hours)
+  deps: { id: number; kind: "job" | "lintas" }[];
+}
+
+export interface Master {
+  project: { key: string; name: string; group: string; instance: string };
+  source: { kind: "file" | "custom"; path: string | null; sha256: string | null; url: string | null;
+            scale: number; machines: number; n_jobs: number };
+  tasks: MasterTask[];
+  developers: { id: number; machine: number; n_tasks: number }[];
+  transform: Record<string, number | string | boolean>;
+}

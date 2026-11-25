@@ -1,5 +1,5 @@
 import { ChevronDown, ChevronRight, ShieldCheck } from "lucide-react";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { LEVEL_NAMES, LEVEL_SHORT, Ladder, LevelChip } from "../components/atoms";
 import { HistoryList } from "../components/views/IssueForm";
 import { angka } from "../format";
@@ -11,7 +11,7 @@ const OUTCOME: Record<Sub["outcome"], string> = {
   tingkat_0: "tingkat 0", aor: "tanpa perbaikan", manual_geser: "geser kartu",
 };
 
-function describe(d: Disruption, devName: (id: number) => string, keyOf: (id: number) => string): string {
+export function describe(d: Disruption, devName: (id: number) => string, keyOf: (id: number) => string): string {
   const p = d.payload as Record<string, number>;
   switch (d.type) {
     case "urgent_task": return `estimasi ${angka(p.effort)} j, prioritas ${angka(p.priority, 2)}`;
@@ -33,9 +33,13 @@ interface Props {
     onApply: () => void;
     busy: boolean;
   };
+  /** Only the sub-decisions (used as the Keputusan tab of an event record). */
+  only?: "subs";
+  /** Extra content in the head of one sub-decision, e.g. a link to the source of its numbers. */
+  subExtra?: (j: number) => ReactNode;
 }
 
-export default function DecisionPanel({ frame, total, onOpenIssue, manualLevels }: Props) {
+export default function DecisionPanel({ frame, total, onOpenIssue, manualLevels, only, subExtra }: Props) {
   const ev = frame.event;
   const lam = frame.meta.lam;
   const [featuresOf, setFeaturesOf] = useState<number | null>(null);
@@ -49,6 +53,7 @@ export default function DecisionPanel({ frame, total, onOpenIssue, manualLevels 
 
   return (
     <aside className="decision" aria-label="Laporan keputusan">
+      {!only && <>
       <h3>Kejadian {ev.index + 1} dari {total}</h3>
       <div className="muted small">jam ke-{angka(ev.time)} · {frame.meta.method_name} · λ = {angka(lam, lam < 1 ? 1 : 0)}</div>
 
@@ -68,8 +73,9 @@ export default function DecisionPanel({ frame, total, onOpenIssue, manualLevels 
           <span><strong>{d.label}</strong><br /><span className="muted small">{describe(d, devName, keyOf)}</span></span>
         </div>
       ))}
+      </>}
 
-      <h4>Keputusan per gangguan <Info term="subdecision" /></h4>
+      {!only && <h4>Keputusan per gangguan <Info term="subdecision" /></h4>}
       {ev.subs.map((s) => {
         const affected = ev.affected[s.j];
         const opts = s.options ? Object.entries(s.options).map(([k, v]) => [Number(k), v] as [number, number]) : [];
@@ -82,6 +88,7 @@ export default function DecisionPanel({ frame, total, onOpenIssue, manualLevels 
             <div className="sub__head">
               <strong>{s.j + 1}. {affected?.label ?? s.type}</strong>
               <span className={`outcome outcome--${s.outcome}`}>{OUTCOME[s.outcome]}</span>
+              {subExtra?.(s.j)}
             </div>
             <div className="small muted" style={{ margin: "4px 0", display: "flex", flexWrap: "wrap", gap: "2px 8px" }}>
               <span>A_j ({affected?.issues.length ?? 0}):</span>
@@ -153,8 +160,10 @@ export default function DecisionPanel({ frame, total, onOpenIssue, manualLevels 
                 onClick={manualLevels.onApply}>Terapkan pilihan untuk kejadian {ev.index + 1}</button>
       )}
 
+      {!only && <>
       <h4>Perubahan yang dihitung (U = {ev.changes}) <Info term="U" /></h4>
       <HistoryList entries={changes} empty="Tidak ada perubahan urutan atau assignee pada keputusan ini." />
+      </>}
 
       {ppoFile && (
         <div className="notice" style={{ marginTop: 16 }}>
