@@ -36,10 +36,11 @@ function useOutside(open: boolean, close: () => void) {
   return ref;
 }
 
-export function ViewSwitcher({ view, onChange }: { view: ViewName; onChange: (v: ViewName) => void }) {
+export function ViewSwitcher({ view, onChange, hideForm }: { view: ViewName; onChange: (v: ViewName) => void;
+                                                            hideForm?: boolean }) {
   return (
     <div className="switcher" role="tablist" aria-label="Tampilan">
-      {VIEWS.map((v) => (
+      {VIEWS.filter((v) => !(hideForm && v.name === "form")).map((v) => (
         <button key={v.name} role="tab" aria-selected={view === v.name} title={v.label}
                 className={view === v.name ? "on" : ""} onClick={() => onChange(v.name)}>
           {v.icon}<span className="sr-only">{v.label}</span>
@@ -60,10 +61,11 @@ interface Props {
   epics: string[];
   children?: ReactNode;
   showGroup?: boolean;
+  hideForm?: boolean;
 }
 
 export default function ControlPanel({ filters, onFilters, groupBy, onGroupBy, view, onView,
-                                       assignees, epics, children, showGroup = true }: Props) {
+                                       assignees, epics, children, showGroup = true, hideForm }: Props) {
   const [menu, setMenu] = useState<"filter" | "group" | null>(null);
   const close = () => setMenu(null);
   const ref = useOutside(menu !== null, close);
@@ -146,7 +148,7 @@ export default function ControlPanel({ filters, onFilters, groupBy, onGroupBy, v
         </div>
       )}
       {children}
-      <ViewSwitcher view={view} onChange={onView} />
+      <ViewSwitcher view={view} onChange={onView} hideForm={hideForm} />
     </div>
   );
 }

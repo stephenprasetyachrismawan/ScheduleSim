@@ -1,5 +1,5 @@
 import type {
-  EpisodeLog, EventLog, EventSummary, Frame, Meta, Phase, ProjectBoard, ProjectListItem,
+  EpisodeLog, EventLog, EventSummary, Frame, Master, Meta, Phase, ProjectBoard, ProjectListItem,
   ProjectSpec, RerunResult, RunStatus,
 } from "./types";
 
@@ -66,6 +66,7 @@ export const api = {
   projects: () => call<ProjectListItem[]>("/api/projects"),
   project: (key: string, capacity = 1.5) =>
     call<ProjectBoard>(`/api/projects/${encodeURIComponent(key)}?capacity=${capacity}`),
+  master: (key: string) => call<Master>(`/api/projects/${encodeURIComponent(key)}/master`),
   createProject: (spec: ProjectSpec) =>
     call<{ key: string }>("/api/projects", { method: "POST", body: JSON.stringify(spec) }),
   updateProject: (key: string, spec: ProjectSpec) =>

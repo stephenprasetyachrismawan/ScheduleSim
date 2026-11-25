@@ -50,6 +50,8 @@ export default function GanttView({ issues, assignees, pauses = {}, ghost, ghost
     return Math.max(1, m * 1.03);
   }, [issues, ghost, pauses, t]);
 
+  // the moment every task on screen is finished: past it the timeline is empty on purpose
+  const finish = useMemo(() => (issues.length ? Math.max(...issues.map((i) => i.end)) : null), [issues]);
   const fit = Math.max(2, (width - NAMES_W - 24) / maxT);
   const px = zoom ?? fit;
   const plotW = Math.max(width - NAMES_W - 2, maxT * px);
@@ -140,6 +142,7 @@ export default function GanttView({ issues, assignees, pauses = {}, ghost, ghost
           {ghost && <span><i style={{ border: "1.5px dashed var(--ink-3)", background: "transparent" }} />{ghostLabel ?? "posisi sebelumnya"}</span>}
           <span><i style={{ backgroundImage: "repeating-linear-gradient(-45deg,#c6cbd3 0 3px,#eef0f3 3px 6px)" }} />tidak tersedia</span>
           {t !== null && t !== undefined && <span><i style={{ background: "var(--danger)", width: 2 }} />t sekarang</span>}
+          {finish !== null && <span><i style={{ background: "var(--success)", width: 2 }} />semua tugas selesai</span>}
         </span>
       </div>
       <div ref={box} className="table-wrap" style={{ maxHeight: "72vh" }}>
@@ -157,6 +160,11 @@ export default function GanttView({ issues, assignees, pauses = {}, ghost, ghost
                 <text x={4} y={AXIS_H - 14} fontSize={11} fill="var(--ink-3)">{angka(v, step < 1 ? 1 : 0)}</text>
               </g>
             ))}
+            {finish !== null && (
+              <g transform={`translate(${x(finish)},0)`}>
+                <text x={-4} y={AXIS_H - 26} fontSize={10.5} fill="var(--success)" textAnchor="end">selesai semua: jam {angka(finish)}</text>
+              </g>
+            )}
             {t !== null && t !== undefined && (
               <g transform={`translate(${x(t)},0)`}>
                 <rect x={-22} y={4} width={44} height={16} rx={8} fill="var(--danger)" />
@@ -225,6 +233,9 @@ export default function GanttView({ issues, assignees, pauses = {}, ghost, ghost
               return <path key={`d${b}-${i.key}`} d={`M${x1} ${y1} C ${x1 + 12} ${y1}, ${x2 - 12} ${y2}, ${x2} ${y2}`}
                            fill="none" stroke="var(--ink-4)" strokeWidth={1} markerEnd="" />;
             }))}
+            {finish !== null && <rect x={x(finish)} y={0} width={Math.max(0, x(maxT) - x(finish))} height={height}
+                                      fill="var(--surface)" opacity={0.6}><title>Tidak ada tugas sesudah jam {angka(finish)}</title></rect>}
+            {finish !== null && <line x1={x(finish)} x2={x(finish)} y1={0} y2={height} stroke="var(--success)" strokeWidth={1.5} strokeDasharray="5 3" />}
             {t !== null && t !== undefined && <line x1={x(t)} x2={x(t)} y1={0} y2={height} stroke="var(--danger)" strokeWidth={1.5} />}
           </svg>
         </div>

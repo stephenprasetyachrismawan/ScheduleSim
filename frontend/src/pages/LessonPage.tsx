@@ -6,7 +6,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api";
 import { Spinner } from "../components/atoms";
 import MiniGantt from "../components/MiniGantt";
-import { useLessonData } from "../learn/lessonData";
+import { KOPI_RUN, useLessonData } from "../learn/lessonData";
 import { LESSONS, makeCtx, type Ctx, type Question, type Visual } from "../learn/lessons";
 import { getProgress, order, saveProgress, type LessonProgress } from "../learn/progress";
 
@@ -144,7 +144,7 @@ export default function LessonPage() {
           <button className="btn btn--primary" onClick={() => navigate(`/belajar/${nextLesson.id}`)}>
             Pelajaran berikutnya: {nextLesson.title}<ArrowRight size={15} /></button>
         ) : (
-          <Link className="btn btn--primary" to="/simulasi?project=KOPI&cap=1.5">Coba sendiri di Simulasi<ArrowRight size={15} /></Link>
+          <Link className="btn btn--primary" to={KOPI_RUN}>Coba sendiri di Simulasi<ArrowRight size={15} /></Link>
         )}
       </div>
     </div>

@@ -26,6 +26,8 @@ interface Props {
   onMove?: (m: Move) => void;
   panelExtra?: ReactNode;
   initialText?: string;
+  /** Open an issue as its own page instead of the Form view inside the workspace. */
+  onOpenIssue?: (key: string) => void;
 }
 
 export default function Workspace(p: Props) {
@@ -43,7 +45,10 @@ export default function Workspace(p: Props) {
     return s;
   }, [p.pauses, p.t]);
 
-  const open = (key: string) => { p.onSelect(key); p.onView("form"); };
+  const open = (key: string) => {
+    if (p.onOpenIssue) { p.onOpenIssue(key); return; }
+    p.onSelect(key); p.onView("form");
+  };
   const formIssue = p.view === "form"
     ? (shown.find((i) => i.key === p.selected) ?? p.issues.find((i) => i.key === p.selected) ?? shown[0])
     : undefined;
@@ -52,7 +57,7 @@ export default function Workspace(p: Props) {
     <div>
       <ControlPanel filters={filters} onFilters={setFilters} groupBy={groupBy} onGroupBy={setGroupBy}
                     view={p.view} onView={p.onView} assignees={p.assignees} epics={epicNames}
-                    showGroup={p.view === "list"}>
+                    showGroup={p.view === "list"} hideForm={!!p.onOpenIssue}>
         {p.panelExtra}
       </ControlPanel>
       {p.view === "list" && (

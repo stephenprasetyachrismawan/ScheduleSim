@@ -1,6 +1,7 @@
 // Seam F3: the lessons can be followed step by step, the quiz answers without giving the right
 // answer away, a finished lesson is marked, and playback in Simulasi goes step by step.
 import { expect, test } from "@playwright/test";
+import { KOPI, openRun, PPO } from "./helpers";
 
 test("a lesson is followed step by step and its quiz checks understanding", async ({ page }) => {
   await page.goto("/belajar");
@@ -33,14 +34,12 @@ test("the numbers of a lesson come from the example run", async ({ page }) => {
 });
 
 test("playback in Simulasi moves one step at a time and says what to look at", async ({ page }) => {
-  await page.goto("/simulasi?project=KOPI&cap=1.5");
-  await page.getByRole("button", { name: "Jalankan" }).click();
-  await expect(page.locator(".scene")).toBeVisible({ timeout: 180_000 });
+  await openRun(page, `/simulasi/run/${PPO}/kejadian/1?${KOPI}&langkah=1`);
   await page.getByRole("combobox", { name: "Kecepatan putar" }).selectOption("700");
-  await page.getByRole("button", { name: "Putar langkah demi langkah" }).click();
-  await expect(page.locator(".scene__step.on")).toContainText("Sebelum gangguan");
-  await expect(page.locator(".scene__step.on")).toContainText("Gangguan masuk", { timeout: 5_000 });
-  await expect(page.locator(".scene__look")).toContainText("tugas yang terkena gangguan");
-  await expect(page.locator(".scene__step.on")).toContainText("Sesudah perbaikan", { timeout: 5_000 });
+  await expect(page.locator(".o-status__step.on")).toHaveText("① Sebelum gangguan");
+  await page.getByRole("button", { name: "Putar" }).click();
+  await expect(page.locator(".o-status__step.on")).toHaveText("② Gangguan masuk", { timeout: 5_000 });
+  await expect(page.locator(".o-look").first()).toContainText("tugas yang terkena gangguan");
+  await expect(page.locator(".o-status__step.on")).toHaveText("③ Sesudah perbaikan", { timeout: 5_000 });
   await page.getByRole("button", { name: "Jeda" }).click();
 });

@@ -2,6 +2,7 @@ import { CheckCircle2, Circle, PlayCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { LESSONS } from "../learn/lessons";
 import { getProgress } from "../learn/progress";
+import { KOPI_RUN } from "../learn/lessonData";
 
 export default function LearnPage() {
   const states = LESSONS.map((l) => getProgress(l.id));
@@ -38,7 +39,7 @@ export default function LearnPage() {
           );
         })}
       </ol>
-      <p className="muted small" style={{ marginTop: 16 }}>Sesudah selesai, coba sendiri di halaman <Link to="/simulasi?project=KOPI&cap=1.5">Simulasi</Link> dengan
+      <p className="muted small" style={{ marginTop: 16 }}>Sesudah selesai, coba sendiri di halaman <Link to={KOPI_RUN}>Simulasi</Link> dengan
         proyek yang sama, lalu buka tab Log hitung untuk melihat setiap angka secara lengkap.</p>
     </div>
   );
