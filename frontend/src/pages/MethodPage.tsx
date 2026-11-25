@@ -2,6 +2,14 @@ import { useQuery } from "@tanstack/react-query";
 import { ShieldAlert, ShieldCheck } from "lucide-react";
 import { api } from "../api";
 import { LEVEL_NAMES, LEVEL_SHORT, Ladder, Spinner } from "../components/atoms";
+import { Info } from "../learn/Learn";
+
+const FLOW: { part: string; steps: string[] }[] = [
+  { part: "Input", steps: ["instans dan kapasitas", "S0 dan tenggat d_i", "E", "seed → daftar gangguan"] },
+  { part: "Proses, setiap kejadian", steps: ["① gangguan", "② AOR", "③ A_j", "④ 38 angka keadaan", "⑤ normalisasi",
+    "⑥ jaringan actor", "⑦ tingkat diminta", "⑧ coba tingkat, hitung J", "⑨ guard", "⑩ jadwal berikutnya"] },
+  { part: "Output", steps: ["Tard akhir / E", "Σ U", "J episode"] },
+];
 
 const LEVEL_TEXT = [
   "Tidak mengubah apa pun sesudah AOR. AOR menggeser tugas terdampak seperlunya dan mempertahankan antrean serta assignee setiap pengembang, jadi hasilnya selalu layak.",
@@ -20,11 +28,22 @@ export default function MethodPage() {
         <p>ScheduleSim menjalankan kode yang sama dengan pengujian tesis <em>Mekanisme Dynamic Rescheduling Berbasis
           Proximal Policy Optimization dengan Representasi Keadaan Teragregasi untuk Manajemen Proyek Perangkat
           Lunak</em> (Universitas Gadjah Mada, 2026). Metode usulannya ARLS-PPO, resep E15 E9c.</p>
-        <h2 className="section-title">Satu kejadian</h2>
+        <h2 className="section-title">Dari input sampai output</h2>
+        <p>Setiap angka pada alur ini bisa dilihat di tab <strong>Log hitung</strong> pada halaman Simulasi, lengkap dengan
+          rumus dan angka yang masuk.</p>
+        <div className="flow">
+          {FLOW.map((f) => (
+            <div key={f.part} className="flow__part">
+              <div className="flow__label">{f.part}</div>
+              <ol className="flow__steps">{f.steps.map((st) => <li key={st}>{st}</li>)}</ol>
+            </div>
+          ))}
+        </div>
+        <h2 className="section-title">Satu kejadian <Info term="event" /></h2>
         <p>Gangguan yang datang dalam rentang satu rata-rata upaya tugas digabung menjadi satu kejadian. Semua
-          gangguan kejadian itu lebih dulu diterapkan dengan AOR. Lalu, untuk setiap gangguan d_j menurut urutan
-          datangnya, dibentuk himpunan terdampak A_j: tugas yang langsung terkena ditambah tugas yang waktu
-          selesainya mundur dan melewati tenggat. Pemilih kemudian memilih satu tingkat perbaikan untuk A_j.</p>
+          gangguan kejadian itu lebih dulu diterapkan dengan AOR. Lalu, untuk setiap gangguan ξ_j menurut urutan
+          datangnya, dibentuk affected set A_j: tugas yang langsung terkena ditambah tugas yang waktu
+          selesainya mundur dan melewati tenggat. Selector kemudian memilih satu tingkat perbaikan untuk A_j.</p>
         {LEVEL_NAMES.map((name, lv) => (
           <div key={lv} className="dis"><Ladder level={lv} size={1.2} />
             <span><strong>{LEVEL_SHORT[lv]} · {name}.</strong> {LEVEL_TEXT[lv]}</span></div>
@@ -32,14 +51,15 @@ export default function MethodPage() {
         <p>Setiap pindahan tugas harus menjaga tugas belum selesai, keahlian dan ketersediaan pengembang,
           pendahulu yang sudah terjadwal, dan sisa beban dalam kapasitas. Pemeriksaan yang sama menjadi mask:
           tingkat tanpa calon ditutup, dan tingkat 0 selalu terbuka.</p>
-        <h2 className="section-title">Satu ukuran dengan satu harga perubahan</h2>
+        <h2 className="section-title">Satu ukuran dengan satu change penalty <Info term="lambda" /></h2>
         <div className="formula">J = Tard / E + λ · U,  U = tugas pindah pengembang + (n − LIS)</div>
         <p>E adalah rata-rata upaya tugas di S0, dan LIS adalah barisan naik terpanjang dari posisi lama tugas yang
-          tetap di pengembang yang sama. J episode = keterlambatan akhir / E + λ dikali jumlah perubahan.</p>
-        <h2 className="section-title">Pemilih ARLS-PPO</h2>
+          tetap di pengembang yang sama. J episode = keterlambatan akhir / E + λ dikali jumlah perubahan. λ disebut
+          change penalty, yaitu harga satu perubahan jadwal.</p>
+        <h2 className="section-title">Selector ARLS-PPO <Info term="actor" /></h2>
         <p>Kebijakan MaskablePPO (MLP 128×128, Tanh) membaca 38 angka teragregasi: 9 tentang seluruh jadwal dan 29
-          tentang gangguan saat ini dan A_j. Penjaga menolak tingkat yang membuat J lebih buruk daripada jadwal
-          sekarang. Kebijakan dilatih dengan behaviour cloning dari guru Sequential Lookahead, satu putaran DAgger
+          tentang gangguan saat ini dan A_j. Guard menolak tingkat yang membuat J lebih buruk daripada jadwal
+          sekarang. Kebijakan dilatih dengan behavior cloning dari teacher Sequential Lookahead, satu putaran DAgger
           (86.832 baris), lalu 100.000 langkah PPO.</p>
       </div>
 
@@ -67,7 +87,7 @@ export default function MethodPage() {
       <h2 className="section-title">Delapan metode yang dilaporkan</h2>
       <div className="table-wrap" style={{ maxWidth: 720 }}>
         <table className="grid">
-          <thead><tr><th>Nama di naskah</th><th>Kode</th><th>Belajar</th><th>Penjaga</th></tr></thead>
+          <thead><tr><th>Nama di naskah</th><th>Kode</th><th>Belajar</th><th>Guard</th></tr></thead>
           <tbody>
             {meta.data?.methods.map((m) => (
               <tr key={m.code}><td><strong>{m.name}</strong></td><td className="mono small">{m.code}</td>

@@ -3,10 +3,11 @@ import { useState } from "react";
 import { LEVEL_NAMES, LEVEL_SHORT, Ladder, LevelChip } from "../components/atoms";
 import { HistoryList } from "../components/views/IssueForm";
 import { angka } from "../format";
+import { Info } from "../learn/Learn";
 import type { Disruption, Frame, Sub } from "../types";
 
 const OUTCOME: Record<Sub["outcome"], string> = {
-  dipakai: "dipakai", ditolak_penjaga: "ditolak penjaga", gagal: "operator gagal",
+  dipakai: "dipakai", ditolak_penjaga: "ditolak guard", gagal: "operator gagal",
   tingkat_0: "tingkat 0", aor: "AOR", manual_geser: "geser kartu",
 };
 
@@ -51,7 +52,7 @@ export default function DecisionPanel({ frame, total, onOpenIssue, manualLevels 
       <h3>Kejadian {ev.index + 1} dari {total}</h3>
       <div className="muted small">jam ke-{angka(ev.time)} · {frame.meta.method_name} · λ = {angka(lam, lam < 1 ? 1 : 0)}</div>
 
-      <h4>Nilai</h4>
+      <h4>Nilai <Info term="J" /></h4>
       <div className="kv">
         <span>Tard/E sebelum gangguan</span><span>{angka(ev.tard_before, 3)}</span>
         <span>Tard/E sesudah AOR</span><span>{angka(ev.tard_aor, 3)}</span>
@@ -60,7 +61,7 @@ export default function DecisionPanel({ frame, total, onOpenIssue, manualLevels 
         <span>J keputusan = Tard/E + λ·U</span><span>{angka(ev.J_after_batch, 3)}</span>
       </div>
 
-      <h4>Gangguan ({ev.disruptions.length})</h4>
+      <h4>Gangguan ({ev.disruptions.length}) <Info term="disruption" /></h4>
       {ev.disruptions.map((d, n) => (
         <div key={n} className="dis">
           <span className="mono small muted" style={{ minWidth: 54 }}>{angka(d.time)}</span>
@@ -68,7 +69,7 @@ export default function DecisionPanel({ frame, total, onOpenIssue, manualLevels 
         </div>
       ))}
 
-      <h4>Keputusan per gangguan</h4>
+      <h4>Keputusan per gangguan <Info term="subdecision" /></h4>
       {ev.subs.map((s) => {
         const affected = ev.affected[s.j];
         const opts = s.options ? Object.entries(s.options).map(([k, v]) => [Number(k), v] as [number, number]) : [];
@@ -90,7 +91,7 @@ export default function DecisionPanel({ frame, total, onOpenIssue, manualLevels 
             </div>
             {s.requested !== null && s.used !== null && (
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap", margin: "6px 0" }}>
-                {s.requested !== s.used && <span title="tingkat yang diminta pemilih"><LevelChip level={s.requested} muted /></span>}
+                {s.requested !== s.used && <span title="tingkat yang diminta selector"><LevelChip level={s.requested} muted /></span>}
                 <LevelChip level={s.used} />
               </div>
             )}
@@ -126,14 +127,14 @@ export default function DecisionPanel({ frame, total, onOpenIssue, manualLevels 
             <div className="small" style={{ marginTop: 6 }}>
               J {angka(s.J_before, 3)} → <strong>{angka(s.J_after, 3)}</strong>
               {s.outcome === "ditolak_penjaga" && s.J_candidate !== undefined && (
-                <span className="muted"> · usulan {LEVEL_SHORT[s.requested ?? 0]} memberi J {angka(s.J_candidate, 3)}, jadi penjaga menolak</span>
+                <span className="muted"> · usulan {LEVEL_SHORT[s.requested ?? 0]} memberi J {angka(s.J_candidate, 3)}, jadi guard menolak</span>
               )}
             </div>
             {s.features && (
               <button className="btn btn--ghost btn--sm" style={{ marginTop: 4, paddingLeft: 0 }}
                       onClick={() => setFeaturesOf(featuresOf === s.j ? null : s.j)}>
                 {featuresOf === s.j ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                38 angka keadaan yang dibaca {learned ? "kebijakan" : "pemilih"}
+                38 angka keadaan yang dibaca {learned ? "kebijakan" : "selector"}
               </button>
             )}
             {featuresOf === s.j && s.features && (
@@ -152,7 +153,7 @@ export default function DecisionPanel({ frame, total, onOpenIssue, manualLevels 
                 onClick={manualLevels.onApply}>Terapkan pilihan untuk kejadian {ev.index + 1}</button>
       )}
 
-      <h4>Perubahan yang dihitung (U = {ev.changes})</h4>
+      <h4>Perubahan yang dihitung (U = {ev.changes}) <Info term="U" /></h4>
       <HistoryList entries={changes} empty="Tidak ada perubahan urutan atau assignee pada keputusan ini." />
 
       {ppoFile && (

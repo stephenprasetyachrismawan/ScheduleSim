@@ -9,7 +9,30 @@ import type { Move } from "../components/views/BoardView";
 import Workspace from "../components/Workspace";
 import { angka, lambdaLabel } from "../format";
 import type { MethodSummary, Phase } from "../types";
+import { Info, Tour, type TourStep } from "../learn/Learn";
 import DecisionPanel from "./DecisionPanel";
+import NumberLog from "./NumberLog";
+
+export const SIM_TOUR: TourStep[] = [
+  { target: "setup", title: "1. Atur episode",
+    body: "Pilih proyek, kapasitas, intensitas, seed, dan λ. Seed yang sama memberi urutan gangguan yang sama untuk semua metode, jadi metode dibandingkan pada soal yang sama." },
+  { target: "run", title: "2. Jalankan",
+    body: "Backend menjalankan cek_episode.run, fungsi yang sama dengan pengujian tesis, dengan berkas model yang hash-nya sama dengan kunci uji." },
+  { target: "strip", title: "3. Strip kejadian",
+    body: "Satu kotak = satu kejadian: jam keputusan, tangga tingkat tertinggi yang dipakai (L0-L3), banyak gangguan (g), dan banyak perubahan (U). Klik untuk pindah kejadian." },
+  { target: "phases", title: "4. Tiga fase",
+    body: "Sebelum gangguan → sesudah AOR (gangguan diterapkan, tingkat 0) → sesudah perbaikan (tingkat yang dipilih metode)." },
+  { target: "view", title: "5. Papan proyek",
+    body: "List, Board, Form, dan Timeline untuk fase yang dipilih. Di Timeline, bayangan abu-abu menunjukkan posisi pada fase sebelumnya, jadi perubahan terlihat." },
+  { target: "side", title: "6. Keputusan",
+    body: "Ringkasan kejadian ini: gangguan, affected set A_j, peluang setiap tingkat, J setiap tingkat, putusan guard, dan perubahan yang dihitung." },
+  { target: "log-tab", title: "7. Log hitung",
+    body: "Uraian angka dari Input (S0, tenggat, E, seed gangguan) lewat Proses (langkah ① sampai ⑩ per sub-keputusan) sampai Output (J episode). Setiap angka dicek sama dengan angka kode penelitian." },
+  { target: "determinism", title: "8. Deterministik",
+    body: "Seed dan hash model menentukan semua angka. Tombol Jalankan ulang menghitung episode yang sama tanpa cache lalu membandingkan semua angkanya; hanya waktu (ms) yang boleh berbeda." },
+  { target: "compare", title: "9. Perbandingan metode",
+    body: "J episode, keterlambatan akhir, banyak perubahan, dan waktu selector untuk semua metode pada gangguan yang sama. Klik baris untuk melihat jejak metode itu." },
+];
 
 type Mode = "compare" | "levels" | "drag";
 
@@ -23,13 +46,13 @@ function MethodTable({ rows, current, onPick, lam }: { rows: MethodSummary[]; cu
                                                      onPick: (k: string) => void; lam: number }) {
   const best = Math.min(...rows.map((r) => r.J));
   return (
-    <div className="table-wrap" style={{ marginTop: 12 }}>
+    <div className="table-wrap" style={{ marginTop: 12 }} data-tour="compare">
       <table className="grid">
         <thead><tr>
-          <th>Metode</th><th className="num" title="J episode = Tard/E akhir + λ·ΣU">J episode</th>
+          <th>Metode <Info term="methods" /></th><th className="num" title="J episode = Tard/E akhir + λ·ΣU">J episode <Info term="J" /></th>
           <th className="num">Tard/E akhir</th><th className="num">Perubahan ΣU</th>
-          <th className="num">Keputusan</th><th className="num" title="p95 waktu satu panggilan pemilih">p95 pemilih (ms)</th>
-          <th className="num" title="Pelanggaran keras pemeriksa jadwal dfjsp.verify">Pelanggaran keras</th>
+          <th className="num">Keputusan</th><th className="num" title="p95 waktu satu panggilan selector">p95 selector (ms) <Info term="p95" /></th>
+          <th className="num" title="Pelanggaran keras pemeriksa jadwal dfjsp.verify">Pelanggaran keras <Info term="hard" /></th>
         </tr></thead>
         <tbody>
           {rows.map((r) => (
@@ -79,6 +102,7 @@ export default function SimulationPage() {
   const [levels, setLevels] = useState<Record<string, number>>({});
   const [pending, setPending] = useState<Record<number, number>>({});
   const [moves, setMoves] = useState<Record<string, Move[]>>({});
+  const [side, setSide] = useState<"decision" | "log">("decision");
   const strip = useRef<HTMLDivElement>(null);
 
   useEffect(() => { setParams({ project, cap: String(capacity) }, { replace: true }); }, [project, capacity, setParams]);
@@ -166,8 +190,9 @@ export default function SimulationPage() {
 
   return (
     <div className="page--full sim">
-      <div className="sim__setup">
-        <label className="field"><span>Proyek</span>
+      <Tour name="simulasi" steps={SIM_TOUR} />
+      <div className="sim__setup" data-tour="setup">
+        <label className="field"><span>Proyek <Info term="instance" /></span>
           <select className="select" value={project} onChange={(e) => { setProject(e.target.value); reset(); }}>
             {["Proyek sendiri", "Brandimarte (latih)", "Benchmark (latih)", "Benchmark (validasi)"].map((g) => (
               <optgroup key={g} label={g}>
@@ -175,18 +200,18 @@ export default function SimulationPage() {
               </optgroup>
             ))}
           </select></label>
-        <label className="field"><span>Kapasitas</span>
+        <label className="field"><span>Kapasitas <Info term="capacity" /></span>
           <select className="select" value={capacity} onChange={(e) => { setCapacity(Number(e.target.value)); reset(); }}>
             {(meta.data?.capacities ?? [1, 1.5, 2]).map((c) => <option key={c} value={c}>{angka(c)}</option>)}
           </select></label>
-        <label className="field"><span>Intensitas gangguan</span>
+        <label className="field"><span>Intensitas gangguan <Info term="intensity" /></span>
           <select className="select" value={intensity} onChange={(e) => { setIntensity(Number(e.target.value)); reset(); }}>
             {(meta.data?.intensities ?? [0.05, 0.15, 0.3]).map((c) => <option key={c} value={c}>{angka(c, 2)}</option>)}
           </select></label>
-        <label className="field"><span title="Seed validasi tesis 5000 dan 5001; seed uji 10000-10009 dan 11000-11004 ditolak">Seed episode</span>
+        <label className="field"><span title="Seed validasi tesis 5000 dan 5001; seed uji 10000-10009 dan 11000-11004 ditolak">Seed episode <Info term="seed" /></span>
           <input className="input mono" type="number" value={seed} style={{ width: 96 }}
                  onChange={(e) => { setSeed(Number(e.target.value)); reset(); }} /></label>
-        <label className="field"><span>λ (harga satu perubahan)</span>
+        <label className="field"><span>λ (change penalty) <Info term="lambda" /></span>
           <select className="select" value={lam} onChange={(e) => { setLam(Number(e.target.value)); reset(); }}>
             {(meta.data?.lambdas ?? [0.1, 0.3, 1, 3, 10, 30]).map((l) => (
               <option key={l} value={l}>{lambdaLabel(l)}{meta.data?.labelled_lambdas.includes(l) ? " (berlabel)" : ""}</option>))}
@@ -217,9 +242,9 @@ export default function SimulationPage() {
         ) : (
           <label className="check small" style={{ alignSelf: "center" }}>
             <input type="checkbox" checked={guard} onChange={(e) => { setGuard(e.target.checked); reset(); }} />
-            Pakai penjaga (tolak pilihan yang menaikkan J)</label>
+            Pakai guard (tolak pilihan yang menaikkan J) <Info term="guard" /></label>
         )}
-        <button className="btn btn--primary" onClick={() => start()} disabled={run.data?.status === "running"}>
+        <button className="btn btn--primary" onClick={() => start()} disabled={run.data?.status === "running"} data-tour="run">
           {run.data?.status === "running" ? <Spinner /> : <Play size={15} />}Jalankan</button>
         {mode !== "compare" && runId && <button className="btn btn--ghost" onClick={reset}><RotateCcw size={15} />Ulang</button>}
       </div>
@@ -242,7 +267,8 @@ export default function SimulationPage() {
             <button className="btn btn--ghost btn--sm" onClick={() => setPlaying((p) => !p)} aria-label={playing ? "Jeda" : "Putar"}>
               {playing ? <Pause size={16} /> : <Play size={16} />}</button>
             <button className="btn btn--ghost btn--sm" onClick={() => setK((x) => Math.min(n - 1, x + 1))} disabled={k >= n - 1} aria-label="Kejadian berikutnya"><ChevronRight size={16} /></button>
-            <div className="events" ref={strip} role="listbox" aria-label="Kejadian">
+            <Info term="event" />
+            <div className="events" ref={strip} role="listbox" aria-label="Kejadian" data-tour="strip">
               {events.data.map((e) => {
                 const top = Math.max(0, ...e.levels.map((l) => l ?? 0));
                 return (
@@ -257,15 +283,16 @@ export default function SimulationPage() {
                 );
               })}
             </div>
-            <div className="segmented">
+            <div className="segmented" data-tour="phases">
               {PHASES.map((p) => <button key={p.value} className={phase === p.value ? "on" : ""} onClick={() => setPhase(p.value)}>{p.label}</button>)}
             </div>
+            <Info term="phases" />
           </>
         )}
       </div>
 
-      <div className="sim__body">
-        <div className="sim__view">
+      <div className={`sim__body ${done && f && side === "log" ? "sim__body--wide" : ""}`}>
+        <div className="sim__view" data-tour="view">
           {!viewRun && (
             <div className="prose" style={{ maxWidth: 720 }}>
               <h2 className="page__title" style={{ marginBottom: 8 }}>Simulasi penjadwalan ulang</h2>
@@ -273,7 +300,9 @@ export default function SimulationPage() {
                 gangguan diserap dulu oleh AOR, lalu metode memilih tingkat perbaikan untuk setiap gangguan:
                 L0 pertahankan AOR, L1 resequence, L2 reassign, atau L3 partial rescheduling.</p>
               <p>Pilih <strong>Bandingkan metode</strong> untuk melihat delapan metode tesis pada gangguan yang sama,
-                atau salah satu mode Manual untuk menjadi pemilihnya sendiri dan membandingkan J Anda dengan ARLS-PPO.</p>
+                atau salah satu mode Manual untuk menjadi selector-nya sendiri dan membandingkan J Anda dengan ARLS-PPO.</p>
+              <p>Tab <strong>Log hitung</strong> di panel kanan menguraikan setiap angka, dari input sampai output. Nyalakan
+                {" "}<strong>Mode belajar</strong> di bilah atas untuk penjelasan istilah (ⓘ) dan tur halaman ini.</p>
               <p className="muted">Model yang dipakai adalah berkas yang sama dengan pengujian tesis (dicek dengan
                 SHA-256 terhadap dokumen kunci uji). Data uji tesis tidak dapat disimulasikan.</p>
             </div>
@@ -300,11 +329,23 @@ export default function SimulationPage() {
           )}
         </div>
         {done && f && (
-          <DecisionPanel frame={f} total={n} onOpenIssue={(key) => { setSelected(key); setView("form"); }}
-                         manualLevels={mode === "levels" && current === manualKey ? {
-                           pending, busy: run.data?.status !== "done",
-                           onChoose: (j, lv) => setPending((p) => ({ ...p, [j]: lv })), onApply: applyLevels,
-                         } : undefined} />
+          <div className="side">
+            <div className="side__tabs" role="tablist" aria-label="Panel kanan" data-tour="side">
+              <button role="tab" aria-selected={side === "decision"} className={side === "decision" ? "on" : ""}
+                      onClick={() => setSide("decision")}>Keputusan</button>
+              <button role="tab" aria-selected={side === "log"} className={side === "log" ? "on" : ""}
+                      onClick={() => setSide("log")} data-tour="log-tab">Log hitung</button>
+            </div>
+            {side === "decision" ? (
+              <DecisionPanel frame={f} total={n} onOpenIssue={(key) => { setSelected(key); setView("form"); }}
+                             manualLevels={mode === "levels" && current === manualKey ? {
+                               pending, busy: run.data?.status !== "done",
+                               onChoose: (j, lv) => setPending((p) => ({ ...p, [j]: lv })), onApply: applyLevels,
+                             } : undefined} />
+            ) : (
+              <NumberLog runId={viewRun!} methodKey={current!} k={k} />
+            )}
+          </div>
         )}
       </div>
       {meta.data && !meta.data.models_match_test_lock && (

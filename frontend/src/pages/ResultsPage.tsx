@@ -11,8 +11,8 @@ const SERIES = [
   { key: "uk2" as const, label: "uk. 2 (rasio total)", color: "#d9770b", shape: "square" },
 ];
 const NAMES: Record<string, string> = {
-  acak_g: "Random + penjaga", fix3_g: "Fixed-L3 + penjaga", aor: "AOR", seq: "Sequential Lookahead",
-  il_g: "Boosting-IL + penjaga", ppo_bc_g: "ARLS-BC", ppo_bc_ppo: "ARLS-PPO tanpa penjaga",
+  acak_g: "Random + guard", fix3_g: "Fixed-L3 + guard", aor: "AOR", seq: "Sequential Lookahead",
+  il_g: "Boosting-IL + guard", ppo_bc_g: "ARLS-BC", ppo_bc_ppo: "ARLS-PPO tanpa guard",
   ppo_bc_ppo_g: "ARLS-PPO",
 };
 
@@ -107,7 +107,7 @@ export default function ResultsPage() {
         19 November 2026 untuk resep E15 E9c dan tidak disimulasikan ulang di ScheduleSim.</p>
 
       <div className="stat-row">
-        <div className="stat"><div className="stat__label">I-1 · p95 waktu pemilih ARLS-PPO, maksimum per instans</div>
+        <div className="stat"><div className="stat__label">I-1 · p95 waktu selector ARLS-PPO, maksimum per instans</div>
           <div className="stat__value">{angka(ppoTime?.p95_pemilih_maks ?? null, 2)} ms</div>
           <div className="small muted">batas 50 ms · {ppoTime?.di_bawah_50ms ? "tercapai" : "tidak tercapai"}</div></div>
         <div className="stat"><div className="stat__label">I-2 · pelanggaran keras pemeriksa jadwal</div>
