@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import {
-  BarChart3, BookA, BookOpen, CalendarRange, FlaskConical, FolderKanban, GraduationCap,
+  BarChart3, BookA, BookOpen, Lightbulb, CalendarRange, FlaskConical, FolderKanban, GraduationCap,
   KanbanSquare, ListTree, Route as RouteIcon, Search, ShieldCheck, ShieldAlert, SquarePen,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -67,6 +67,7 @@ export default function Shell() {
       <header className="topbar">
         <Link to="/" className="topbar__brand"><img src="/logo.svg" alt="" />ScheduleSim</Link>
         <nav className="topbar__nav" aria-label="Utama">
+          <NavLink to="/belajar">Belajar</NavLink>
           <NavLink to="/" end>Proyek</NavLink>
           <NavLink to={`/simulasi?project=${current}`}>Simulasi</NavLink>
           <NavLink to="/hasil-uji">Hasil uji tesis</NavLink>
@@ -106,6 +107,8 @@ export default function Shell() {
               <div className="sidebar__project-group">{info?.group ?? "Proyek"}</div>
             </div>
           </div>
+          <NavLink className={({ isActive }) => `nav nav--learn ${isActive ? "active" : ""}`} to="/belajar">
+            <Lightbulb size={17} />Belajar dari nol</NavLink>
           <div className="sidebar__label">Perencanaan</div>
           <NavLink className={() => `nav ${onProject && view === "list" ? "active" : ""}`}
                    to={`/proyek/${current}?view=list`}><ListTree size={17} />List</NavLink>

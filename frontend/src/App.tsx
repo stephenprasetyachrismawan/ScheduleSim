@@ -1,6 +1,8 @@
 import { Route, Routes } from "react-router-dom";
 import Shell from "./components/Shell";
 import GlossaryPage from "./pages/GlossaryPage";
+import LearnPage from "./pages/LearnPage";
+import LessonPage from "./pages/LessonPage";
 import MethodPage from "./pages/MethodPage";
 import ProjectEditor from "./pages/ProjectEditor";
 import ProjectPage from "./pages/ProjectPage";
@@ -20,6 +22,8 @@ export default function App() {
         <Route path="hasil-uji" element={<ResultsPage />} />
         <Route path="metode" element={<MethodPage />} />
         <Route path="istilah" element={<GlossaryPage />} />
+        <Route path="belajar" element={<LearnPage />} />
+        <Route path="belajar/:id" element={<LessonPage />} />
         <Route path="*" element={<div className="page"><h1 className="page__title">Halaman tidak ditemukan</h1></div>} />
       </Route>
     </Routes>

@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Lock, Plus } from "lucide-react";
+import { Lightbulb, Lock, Plus } from "lucide-react";
 import { Link } from "react-router-dom";
 import { api } from "../api";
 import { Spinner } from "../components/atoms";
@@ -22,6 +22,11 @@ export default function ProjectsPage() {
         dan mesin menjadi pengembang. Buka proyek untuk melihat jadwal awalnya, lalu simulasikan
         gangguan untuk melihat cara setiap metode memperbaiki jadwal.
       </p>
+      <Link to="/belajar" className="learn-banner">
+        <Lightbulb size={20} />
+        <span><b>Baru di sini?</b> Mulai dari <u>Belajar dari nol</u>: sembilan pelajaran pendek dengan contoh kecil dan
+          soal latihan, dari "apa itu jadwal" sampai cara ARLS-PPO memilih perbaikan.</span>
+      </Link>
       <div className="notice notice--warn">
         <Lock size={16} style={{ flex: "none", marginTop: 2 }} />
         <span>MK03, MK04, MK09, dan 35 instans benchmark uji adalah data uji tesis dan tidak bisa dibuka

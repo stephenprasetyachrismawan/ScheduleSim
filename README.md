@@ -61,7 +61,25 @@ ScheduleSim tidak punya logika penjadwalan sendiri. Backend memanggil `arls_ppo`
   - Board: swimlane per assignee;
   - Form: statusbar, tab, dan riwayat;
   - Timeline: baris per assignee atau per epic, tenggat, dan dependensi.
-- **Simulasi gangguan.** Di atas jadwal ada panel yang menyebut apa yang sedang tampil: kejadian mana,
+- **Belajar dari nol** (`/belajar`). Ada sembilan pelajaran pendek untuk pembaca yang baru mengenal topik ini.
+  Satu pelajaran membahas satu konsep:
+  1. tugas dan pengembang;
+  2. jadwal awal dan tenggat;
+  3. gangguan;
+  4. gangguan masuk tanpa perbaikan;
+  5. empat tingkat perbaikan;
+  6. J dan LIS;
+  7. change penalty λ;
+  8. teacher, ARLS-PPO, dan guard;
+  9. satu episode.
+
+  Setiap langkah berisi penjelasan singkat, jadwal mini dengan tugas yang perlu diperhatikan, dan kotak *Perhatikan*.
+  Setiap pelajaran ditutup dengan soal yang memberi umpan balik tanpa langsung membuka jawaban. Semua contoh memakai
+  proyek fiktif Kedai kopi yang dijalankan dengan kode penelitian, jadi angkanya diambil dari run itu, bukan diketik
+  tangan. Kemajuan belajar disimpan di browser.
+- **Simulasi gangguan.** Tombol putar menjalankan episode langkah demi langkah (① → ② → ③ untuk setiap
+  kejadian). Kecepatannya bisa dipilih dari sangat pelan sampai cepat. Kotak *Perhatikan* menandai tugas yang
+  terkena gangguan di langkah ② dan tugas yang diubah di langkah ③. Di atas jadwal ada panel yang menyebut apa yang sedang tampil: kejadian mana,
   jadwal metode mana (tombol per metode berisi tingkat yang dipakai, U, dan Tard/E pada kejadian itu),
   dan langkah mana: ① sebelum gangguan, ② gangguan masuk (tugas yang terkena digeser seperlunya, belum
   diperbaiki; di naskah disebut tingkat 0 atau AOR), ③ sesudah perbaikan oleh metode itu. Metode
@@ -117,6 +135,10 @@ ScheduleSim tidak punya logika penjadwalan sendiri. Backend memanggil `arls_ppo`
 
 ![Pilih metode dan langkah pada satu kejadian](docs/tangkapan/13_pilih_metode.png)
 
+| Belajar dari nol | Satu langkah pelajaran |
+|---|---|
+| ![Daftar pelajaran](docs/tangkapan/15_belajar_daftar.png) | ![Pelajaran](docs/tangkapan/14_belajar_pelajaran.png) |
+
 ## Menjalankan
 
 Kloning beserta submodule (berisi model, sekitar 70 MB):
@@ -155,7 +177,7 @@ Pengaturan lewat variabel lingkungan:
 ```bash
 cd backend && .venv/bin/python -m pytest          # proyeksi, API, jejak episode nyata
 cd frontend && npm run dev                        # Vite di :5173, proxy /api ke :8000
-cd frontend && npm test                           # filter, pengelompokan, format angka
+cd frontend && npm test                           # filter, isi pelajaran terhadap data run contoh
 cd e2e && npx playwright test                     # empat view, simulasi, log hitung, Mode belajar
 cd e2e && SCHEDULESIM_PORT=8010 npx playwright test  # terhadap server kedua di port lain
 ```
