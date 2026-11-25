@@ -110,10 +110,17 @@ def _submodule_commit() -> str | None:
     """Commit of the pinned arls-ppo checkout (``ARLS_PPO_COMMIT`` inside Docker)."""
     if os.environ.get("ARLS_PPO_COMMIT"):
         return os.environ["ARLS_PPO_COMMIT"][:12]
-    head = ROOT / ".git" / "modules" / "vendor" / "arls-ppo" / "HEAD"
     try:
-        return head.read_text().strip()[:12]
-    except OSError:
+        # vendor/arls-ppo/.git is a file "gitdir: <path>" in a clone and in a worktree alike
+        dot_git = ARLS_PPO / ".git"
+        gitdir = dot_git
+        if dot_git.is_file():
+            gitdir = (ARLS_PPO / dot_git.read_text().split(":", 1)[1].strip()).resolve()
+        head = (gitdir / "HEAD").read_text().strip()
+        if head.startswith("ref:"):
+            head = (gitdir / head.split(" ", 1)[1]).read_text().strip()
+        return head[:12]
+    except (OSError, IndexError):
         return None
 
 
