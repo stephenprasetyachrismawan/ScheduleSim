@@ -1,11 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import {
-  BarChart3, BookOpen, CalendarRange, FlaskConical, FolderKanban, KanbanSquare, ListTree,
-  Search, ShieldCheck, ShieldAlert, SquarePen,
+  BarChart3, BookA, BookOpen, Lightbulb, CalendarRange, FlaskConical, FolderKanban, GraduationCap,
+  KanbanSquare, ListTree, Route as RouteIcon, Search, ShieldCheck, ShieldAlert, SquarePen,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useMatch, useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../api";
+import { useLearn } from "../learn/Learn";
 
 const LAST = "schedulesim:last-project";
 
@@ -59,21 +60,34 @@ export default function Shell() {
   };
 
   const ok = meta.data?.models_match_test_lock;
+  const learn = useLearn();
+  const tourName = location.pathname.startsWith("/simulasi") ? "simulasi" : null;
   return (
     <div className="shell">
       <header className="topbar">
         <Link to="/" className="topbar__brand"><img src="/logo.svg" alt="" />ScheduleSim</Link>
         <nav className="topbar__nav" aria-label="Utama">
+          <NavLink to="/belajar">Belajar</NavLink>
           <NavLink to="/" end>Proyek</NavLink>
           <NavLink to={`/simulasi?project=${current}`}>Simulasi</NavLink>
           <NavLink to="/hasil-uji">Hasil uji tesis</NavLink>
           <NavLink to="/metode">Tentang metode</NavLink>
+          <NavLink to="/istilah">Istilah</NavLink>
         </nav>
         <form className="topbar__search" onSubmit={jump} role="search">
           <Search size={15} />
           <input value={query} onChange={(e) => setQuery(e.target.value)}
                  placeholder="Cari issue, misalnya MK01-12" aria-label="Cari issue" />
         </form>
+        <button className={`learn-toggle ${learn.on ? "on" : ""}`} aria-pressed={learn.on}
+                onClick={() => learn.setOn(!learn.on)}
+                title="Mode belajar: tampilkan penjelasan istilah (ⓘ) dan tur halaman">
+          <GraduationCap size={16} />Mode belajar<span className="learn-toggle__dot" />
+        </button>
+        {learn.on && tourName && (
+          <button className="btn btn--sm" onClick={() => learn.startTour(tourName)} data-tour-start>
+            <RouteIcon size={14} />Tur halaman ini</button>
+        )}
         {meta.data && (
           <Link to="/metode" className={`topbar__badge ${ok ? "" : "topbar__badge--bad"}`}
                 title="Hash SHA-256 berkas model dibandingkan dengan dokumen kunci uji">
@@ -93,6 +107,8 @@ export default function Shell() {
               <div className="sidebar__project-group">{info?.group ?? "Proyek"}</div>
             </div>
           </div>
+          <NavLink className={({ isActive }) => `nav nav--learn ${isActive ? "active" : ""}`} to="/belajar">
+            <Lightbulb size={17} />Belajar dari nol</NavLink>
           <div className="sidebar__label">Perencanaan</div>
           <NavLink className={() => `nav ${onProject && view === "list" ? "active" : ""}`}
                    to={`/proyek/${current}?view=list`}><ListTree size={17} />List</NavLink>
@@ -110,6 +126,8 @@ export default function Shell() {
             <BarChart3 size={17} />Hasil uji tesis</NavLink>
           <NavLink className={({ isActive }) => `nav ${isActive ? "active" : ""}`} to="/metode">
             <BookOpen size={17} />Tentang metode</NavLink>
+          <NavLink className={({ isActive }) => `nav ${isActive ? "active" : ""}`} to="/istilah">
+            <BookA size={17} />Istilah</NavLink>
           <NavLink className={({ isActive }) => `nav ${isActive ? "active" : ""}`} to="/" end>
             <FolderKanban size={17} />Semua proyek</NavLink>
           <div className="sidebar__foot">

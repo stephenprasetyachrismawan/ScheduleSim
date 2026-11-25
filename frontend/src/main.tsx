@@ -10,6 +10,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import App from "./App";
+import { LearnProvider } from "./learn/Learn";
 
 const client = new QueryClient({ defaultOptions: { queries: { refetchOnWindowFocus: false } } });
 
@@ -17,7 +18,9 @@ createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <QueryClientProvider client={client}>
       <BrowserRouter>
-        <App />
+        <LearnProvider>
+          <App />
+        </LearnProvider>
       </BrowserRouter>
     </QueryClientProvider>
   </StrictMode>,

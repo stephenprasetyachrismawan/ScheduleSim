@@ -9,6 +9,8 @@ Teragregasi untuk Manajemen Proyek Perangkat Lunak* (Universitas Gadjah Mada, 20
 number comes from the thesis code and the locked models in
 [arls-ppo](https://github.com/stephenprasetyachrismawan/arls-ppo).*
 
+Coba langsung di **https://sch.stevewithcode.net**.
+
 ![Simulasi: timeline, strip kejadian, dan panel keputusan](docs/tangkapan/06_sim_gantt.png)
 
 ## Selaras dengan tesis
@@ -18,7 +20,7 @@ ScheduleSim tidak punya logika penjadwalan sendiri. Backend memanggil `arls_ppo`
 
 - **Kode episode sama dengan uji tesis.** Episode dijalankan dengan `cek_episode.run`, fungsi yang
   dipakai `buka_uji.py` saat data uji dibuka. Lingkungan, gangguan TAWOS, tangga perbaikan,
-  38 angka keadaan, penjaga, J, dan pemeriksa jadwal semuanya dari kode itu.
+  38 angka keadaan, guard, J, dan pemeriksa jadwal semuanya dari kode itu.
 - **Model sama dengan uji tesis.** Sebelum model dimuat, SHA-256 setiap berkas dibandingkan
   dengan dokumen kunci uji (19 November 2026); berkas yang berbeda ditolak. Statusnya tampil di
   bilah atas ("Model = kunci uji") dan di halaman Tentang metode.
@@ -29,8 +31,10 @@ ScheduleSim tidak punya logika penjadwalan sendiri. Backend memanggil `arls_ppo`
   (10000-10009, 11000-11004) tidak bisa disimulasikan. Hasil ujinya hanya dibaca dari berkas hasil
   Bab V di halaman *Hasil uji tesis*.
 - **Nama dan angka mengikuti naskah:**
-  - nama metode: ARLS-PPO, ARLS-PPO tanpa penjaga, ARLS-BC, AOR, Sequential Lookahead,
-    Fixed-L3 + penjaga, Random + penjaga, Boosting-IL + penjaga;
+  - nama metode: ARLS-PPO, ARLS-PPO tanpa guard, ARLS-BC, AOR, Sequential Lookahead,
+    Fixed-L3 + guard, Random + guard, Boosting-IL + guard;
+  - istilah teknis tetap bahasa Inggris seperti di naskah: guard, selector, teacher,
+    change penalty (λ), affected set;
   - λ 0,1 / 0,3 / 1 / 3 / 10 / 30;
   - kapasitas 1,0 / 1,5 / 2,0;
   - intensitas 0,05 / 0,15 / 0,30;
@@ -57,16 +61,55 @@ ScheduleSim tidak punya logika penjadwalan sendiri. Backend memanggil `arls_ppo`
   - Board: swimlane per assignee;
   - Form: statusbar, tab, dan riwayat;
   - Timeline: baris per assignee atau per epic, tenggat, dan dependensi.
-- **Simulasi gangguan.** Pilih proyek, kapasitas, intensitas, seed, λ, dan metode, lalu tekan
-  Jalankan. Strip kejadian menampilkan tingkat perbaikan yang dipakai (glyph tangga L0-L3). Setiap
-  kejadian bisa dilihat dalam tiga fase: sebelum gangguan, sesudah AOR, dan sesudah perbaikan.
-  Panel keputusan menampilkan:
+- **Belajar dari nol** (`/belajar`). Ada sembilan pelajaran pendek untuk pembaca yang baru mengenal topik ini.
+  Satu pelajaran membahas satu konsep:
+  1. tugas dan pengembang;
+  2. jadwal awal dan tenggat;
+  3. gangguan;
+  4. gangguan masuk tanpa perbaikan;
+  5. empat tingkat perbaikan;
+  6. J dan LIS;
+  7. change penalty λ;
+  8. teacher, ARLS-PPO, dan guard;
+  9. satu episode.
+
+  Setiap langkah berisi penjelasan singkat, jadwal mini dengan tugas yang perlu diperhatikan, dan kotak *Perhatikan*.
+  Setiap pelajaran ditutup dengan soal yang memberi umpan balik tanpa langsung membuka jawaban. Semua contoh memakai
+  proyek fiktif Kedai kopi yang dijalankan dengan kode penelitian, jadi angkanya diambil dari run itu, bukan diketik
+  tangan. Kemajuan belajar disimpan di browser.
+- **Simulasi gangguan.** Tombol putar menjalankan episode langkah demi langkah (① → ② → ③ untuk setiap
+  kejadian). Kecepatannya bisa dipilih dari sangat pelan sampai cepat. Kotak *Perhatikan* menandai tugas yang
+  terkena gangguan di langkah ② dan tugas yang diubah di langkah ③. Di atas jadwal ada panel yang menyebut apa yang sedang tampil: kejadian mana,
+  jadwal metode mana (tombol per metode berisi tingkat yang dipakai, U, dan Tard/E pada kejadian itu),
+  dan langkah mana: ① sebelum gangguan, ② gangguan masuk (tugas yang terkena digeser seperlunya, belum
+  diperbaiki; di naskah disebut tingkat 0 atau AOR), ③ sesudah perbaikan oleh metode itu. Metode
+  pembanding AOR ditulis "AOR (tanpa perbaikan)" karena ia berhenti di langkah ②. Cara pakai: pilih
+  proyek, kapasitas, intensitas, seed, λ, dan metode, lalu tekan Jalankan. Strip kejadian menampilkan
+  tingkat perbaikan yang dipakai metode terpilih (glyph tangga L0-L3). Panel keputusan menampilkan:
   - A_j;
   - peluang tiap tingkat dari kebijakan;
   - J tiap tingkat;
-  - putusan penjaga;
+  - putusan guard;
   - 38 angka keadaan;
   - perubahan yang dihitung.
+- **Log hitung.** Tab di samping panel keputusan menguraikan dari mana setiap angka berasal:
+  - *Input*: kapasitas, S0 (dibangun ulang dari berkas instans dan dicek sama), tenggat
+    d_i = C_i + 0,5 × (C_i − S_i), E sebagai jumlah dibagi banyak tugas, seed gangguan, parameter TAWOS,
+    dan daftar gangguan yang ditarik ulang dari seed lalu dicek sama;
+  - *Proses*, per kejadian: ① efek setiap gangguan, ② AOR, ③ alasan setiap tugas masuk A_j, lalu per
+    sub-keputusan ④ ke-38 angka keadaan beserta rumus dan angka yang masuk, ⑤ normalisasi, ⑥ jaringan
+    actor (dua lapis Tanh, logit, softmax bermask), ⑦ tingkat yang diminta, ⑧ J keempat tingkat
+    (tugas terlambat, pindah pengembang, antrean lama dan baru dengan LIS), ⑨ guard, ⑩ hasil;
+  - *Output*: Tard akhir / E, Σ U, dan J episode.
+
+  Setiap angka dihitung arls-ppo (`trace_episode(..., explain=True)`) pada saat kode penelitian
+  menghitung angka yang sama, lalu dicek sama persis; kejadian contoh Subbab 4.6 naskah terulang angka
+  demi angka. Tombol *Jalankan ulang dan bandingkan* menghitung episode yang sama tanpa cache dan
+  membandingkan semua angkanya; hanya waktu (ms) yang boleh berbeda. Log bisa disalin sebagai teks
+  atau diunduh sebagai JSON.
+- **Mode belajar.** Tombol di bilah atas, mati secara bawaan. Bila dinyalakan, tanda ⓘ di samping
+  istilah dan angka membuka penjelasan singkat beserta rumus dan subbab naskahnya, dan halaman
+  Simulasi punya tur sembilan langkah. Halaman *Istilah* memuat semua penjelasan itu.
 - **Manual.** Ada dua mode, dan keduanya dibandingkan dengan ARLS-PPO dan AOR pada gangguan yang sama:
   - *pilih tingkat*: Anda memilih L0-L3 untuk setiap gangguan;
   - *geser kartu*: Anda menggeser kartu di Board. Setiap geseran diperiksa dengan aturan
@@ -85,6 +128,16 @@ ScheduleSim tidak punya logika penjadwalan sendiri. Backend memanggil `arls_ppo`
 | Board | Form | Hasil uji |
 |---|---|---|
 | ![Board](docs/tangkapan/02_board.png) | ![Form](docs/tangkapan/05_form.png) | ![Hasil uji](docs/tangkapan/08_results.png) |
+
+| Log hitung | J setiap tingkat dan LIS | Tur Mode belajar |
+|---|---|---|
+| ![Log hitung](docs/tangkapan/10_log_proses.png) | ![J setiap tingkat](docs/tangkapan/11_log_tingkat.png) | ![Tur](docs/tangkapan/12_tur.png) |
+
+![Pilih metode dan langkah pada satu kejadian](docs/tangkapan/13_pilih_metode.png)
+
+| Belajar dari nol | Satu langkah pelajaran |
+|---|---|
+| ![Daftar pelajaran](docs/tangkapan/15_belajar_daftar.png) | ![Pelajaran](docs/tangkapan/14_belajar_pelajaran.png) |
 
 ## Menjalankan
 
@@ -113,15 +166,20 @@ ARLS_PPO_COMMIT=$(git -C vendor/arls-ppo rev-parse --short=12 HEAD) docker compo
 Pengaturan lewat variabel lingkungan:
 
 - `SCHEDULESIM_WORKERS`: banyak proses pekerja, bawaan 4;
-- `SCHEDULESIM_DATA`: folder proyek sendiri dan cache hasil.
+- `SCHEDULESIM_DATA`: folder proyek sendiri dan cache hasil;
+- `SCHEDULESIM_PUBLIC=1`: mode situs publik (dipakai di sch.stevewithcode.net). Setiap pengunjung
+  paling banyak punya 2 simulasi berjalan, antrean bersama paling banyak 12 episode, proyek contoh
+  hanya bisa dibaca, proyek pengunjung hanya bisa diubah oleh browser yang membuatnya (paling banyak
+  60 issue dan 10 pengembang), dan cache dijaga di bawah 2 GB.
 
 ## Pengembangan
 
 ```bash
 cd backend && .venv/bin/python -m pytest          # proyeksi, API, jejak episode nyata
 cd frontend && npm run dev                        # Vite di :5173, proxy /api ke :8000
-cd frontend && npm test                           # filter, pengelompokan, format angka
-cd e2e && npx playwright test                     # empat view, simulasi, angka layar = API
+cd frontend && npm test                           # filter, isi pelajaran terhadap data run contoh
+cd e2e && npx playwright test                     # empat view, simulasi, log hitung, Mode belajar
+cd e2e && SCHEDULESIM_PORT=8010 npx playwright test  # terhadap server kedua di port lain
 ```
 
 Struktur:

@@ -1,6 +1,25 @@
 import type {
-  EventSummary, Frame, Meta, Phase, ProjectBoard, ProjectListItem, ProjectSpec, RunStatus,
+  EpisodeLog, EventLog, EventSummary, Frame, Meta, Phase, ProjectBoard, ProjectListItem,
+  ProjectSpec, RerunResult, RunStatus,
 } from "./types";
+
+const OWNER = "schedulesim:token-pembuat";
+
+/** Random token of this browser; on the public site only its maker may change a project. */
+function ownerToken(): string {
+  try {
+    let t = localStorage.getItem(OWNER);
+    if (!t) {
+      const a = new Uint8Array(16);
+      crypto.getRandomValues(a);
+      t = Array.from(a, (b) => b.toString(16).padStart(2, "0")).join("");
+      localStorage.setItem(OWNER, t);
+    }
+    return t;
+  } catch {
+    return "";
+  }
+}
 
 export class ApiError extends Error {
   constructor(public status: number, message: string, public body?: unknown) {
@@ -11,7 +30,8 @@ export class ApiError extends Error {
 async function call<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, {
     ...init,
-    headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
+    headers: { "Content-Type": "application/json", "X-Owner-Token": ownerToken(),
+               ...(init?.headers ?? {}) },
   });
   if (res.status === 204) return undefined as T;
   const body = await res.json().catch(() => ({}));
@@ -59,6 +79,12 @@ export const api = {
   frame: (id: string, key: string, k: number, phase: Phase) =>
     call<Frame>(`/api/runs/${id}/${encodeURIComponent(key)}/frames/${k}/${phase}`),
   results: () => call<Results>("/api/results"),
+  log: (id: string, key: string) =>
+    call<EpisodeLog>(`/api/runs/${id}/${encodeURIComponent(key)}/log`),
+  logEvent: (id: string, key: string, k: number) =>
+    call<EventLog>(`/api/runs/${id}/${encodeURIComponent(key)}/log/${k}`),
+  rerun: (id: string, key: string) =>
+    call<RerunResult>(`/api/runs/${id}/${encodeURIComponent(key)}/ulang`, { method: "POST" }),
 };
 
 export type Interval = [number, number, number];

@@ -9,34 +9,55 @@ import type { Move } from "../components/views/BoardView";
 import Workspace from "../components/Workspace";
 import { angka, lambdaLabel } from "../format";
 import type { MethodSummary, Phase } from "../types";
+import { Info, Tour, type TourStep } from "../learn/Learn";
 import DecisionPanel from "./DecisionPanel";
+import NumberLog from "./NumberLog";
+import Scene, { methodLabel } from "./Scene";
+
+export const SIM_TOUR: TourStep[] = [
+  { target: "setup", title: "1. Atur episode",
+    body: "Pilih proyek, kapasitas, intensitas, seed, dan λ. Seed yang sama memberi urutan gangguan yang sama untuk semua metode, jadi metode dibandingkan pada soal yang sama." },
+  { target: "run", title: "2. Jalankan",
+    body: "Backend menjalankan cek_episode.run, fungsi yang sama dengan pengujian tesis, dengan berkas model yang hash-nya sama dengan kunci uji." },
+  { target: "strip", title: "3. Strip kejadian",
+    body: "Satu kotak = satu kejadian: jam keputusan, tangga tingkat tertinggi yang dipakai (L0-L3), banyak gangguan (g), dan banyak perubahan (U). Klik untuk pindah kejadian." },
+  { target: "methods-switch", title: "4. Jadwal menurut metode",
+    body: "Pilih metode untuk melihat jadwal yang dihasilkannya pada kejadian ini. Setiap tombol menunjukkan tingkat yang dipakai metode itu (tangga), banyak perubahan U, dan keterlambatan sesudahnya. Gangguannya sama untuk semua metode; mulai kejadian kedua, jadwal tiap metode bisa berbeda karena keputusan sebelumnya." },
+  { target: "phases", title: "5. Tiga langkah dalam satu kejadian",
+    body: "① Jadwal sebelum gangguan → ② gangguan dimasukkan dan tugas yang terkena digeser seperlunya, belum diperbaiki (di naskah: tingkat 0 atau AOR) → ③ jadwal sesudah metode memilih perbaikan. Keterangan di bawah tombol menjelaskan langkah yang sedang tampil." },
+  { target: "view", title: "6. Papan proyek",
+    body: "List, Board, Form, dan Timeline untuk fase yang dipilih. Di Timeline, bayangan abu-abu menunjukkan posisi pada fase sebelumnya, jadi perubahan terlihat." },
+  { target: "side", title: "7. Keputusan",
+    body: "Ringkasan kejadian ini: gangguan, affected set A_j, peluang setiap tingkat, J setiap tingkat, putusan guard, dan perubahan yang dihitung." },
+  { target: "log-tab", title: "8. Log hitung",
+    body: "Uraian angka dari Input (S0, tenggat, E, seed gangguan) lewat Proses (langkah ① sampai ⑩ per sub-keputusan) sampai Output (J episode). Setiap angka dicek sama dengan angka kode penelitian." },
+  { target: "determinism", title: "9. Deterministik",
+    body: "Seed dan hash model menentukan semua angka. Tombol Jalankan ulang menghitung episode yang sama tanpa cache lalu membandingkan semua angkanya; hanya waktu (ms) yang boleh berbeda." },
+  { target: "compare", title: "10. Perbandingan seluruh episode",
+    body: "J episode, keterlambatan akhir, banyak perubahan, dan waktu selector untuk semua metode pada gangguan yang sama, dihitung sampai akhir episode. Klik baris untuk menampilkan jadwal metode itu." },
+];
 
 type Mode = "compare" | "levels" | "drag";
 
-const PHASES: { value: Phase; label: string }[] = [
-  { value: "before", label: "Sebelum gangguan" },
-  { value: "aor", label: "Sesudah AOR" },
-  { value: "after", label: "Sesudah perbaikan" },
-];
 
 function MethodTable({ rows, current, onPick, lam }: { rows: MethodSummary[]; current: string | null;
                                                      onPick: (k: string) => void; lam: number }) {
   const best = Math.min(...rows.map((r) => r.J));
   return (
-    <div className="table-wrap" style={{ marginTop: 12 }}>
+    <div className="table-wrap" style={{ marginTop: 12 }} data-tour="compare">
       <table className="grid">
         <thead><tr>
-          <th>Metode</th><th className="num" title="J episode = Tard/E akhir + λ·ΣU">J episode</th>
+          <th>Metode <Info term="methods" /></th><th className="num" title="J episode = Tard/E akhir + λ·ΣU">J episode <Info term="J" /></th>
           <th className="num">Tard/E akhir</th><th className="num">Perubahan ΣU</th>
-          <th className="num">Keputusan</th><th className="num" title="p95 waktu satu panggilan pemilih">p95 pemilih (ms)</th>
-          <th className="num" title="Pelanggaran keras pemeriksa jadwal dfjsp.verify">Pelanggaran keras</th>
+          <th className="num">Keputusan</th><th className="num" title="p95 waktu satu panggilan selector">p95 selector (ms) <Info term="p95" /></th>
+          <th className="num" title="Pelanggaran keras pemeriksa jadwal dfjsp.verify">Pelanggaran keras <Info term="hard" /></th>
         </tr></thead>
         <tbody>
           {rows.map((r) => (
             <tr key={r.key} className={`row ${current === r.key ? "selected" : ""}`}
                 onClick={() => r.model_seed !== "mean" && onPick(r.key)}
                 style={{ cursor: r.model_seed === "mean" ? "default" : undefined }}>
-              <td><strong>{r.name}</strong>{typeof r.model_seed === "number" && <span className="muted small"> · seed model {r.model_seed}</span>}</td>
+              <td><strong>{methodLabel(r)}</strong>{typeof r.model_seed === "number" && <span className="muted small"> · seed model {r.model_seed}</span>}</td>
               <td className="num" style={{ fontWeight: r.J === best ? 700 : 400 }}>{angka(r.J, 3)}</td>
               <td className="num">{angka(r.tard, 3)}</td>
               <td className="num">{angka(r.changes, r.model_seed === "mean" ? 1 : 0)}</td>
@@ -79,6 +100,7 @@ export default function SimulationPage() {
   const [levels, setLevels] = useState<Record<string, number>>({});
   const [pending, setPending] = useState<Record<number, number>>({});
   const [moves, setMoves] = useState<Record<string, Move[]>>({});
+  const [side, setSide] = useState<"decision" | "log">("decision");
   const strip = useRef<HTMLDivElement>(null);
 
   useEffect(() => { setParams({ project, cap: String(capacity) }, { replace: true }); }, [project, capacity, setParams]);
@@ -110,13 +132,27 @@ export default function SimulationPage() {
                            queryFn: () => api.frame(viewRun!, current!, k, phase),
                            enabled: done && !!current && k < Math.max(n, 1), placeholderData: (p) => p });
 
+  // Playback goes step by step: (1) before, (2) disruptions entered, (3) after the repair, then
+  // the next event. The speed is the time each step stays on screen.
+  const [speed, setSpeed] = useState(3000);
+  const pos = useRef({ k, phase });
+  pos.current = { k, phase };
   useEffect(() => {
     if (!playing) return;
     const id = setInterval(() => {
-      setK((x) => { if (x + 1 >= n) { setPlaying(false); return x; } return x + 1; });
-    }, 1300);
+      const { k: kk, phase: ph } = pos.current;
+      if (ph === "before") setPhase("aor");
+      else if (ph === "aor") setPhase("after");
+      else if (kk + 1 < n) { setK(kk + 1); setPhase("before"); }
+      else setPlaying(false);
+    }, speed);
     return () => clearInterval(id);
-  }, [playing, n]);
+  }, [playing, n, speed]);
+  const togglePlay = () => {
+    if (!playing && k >= n - 1 && phase === "after") { setK(0); setPhase("before"); }
+    else if (!playing && phase === "after") { setPhase("before"); }
+    setPlaying((x) => !x);
+  };
   useEffect(() => {
     strip.current?.querySelector(".ev.on")?.scrollIntoView({ inline: "center", block: "nearest" });
   }, [k]);
@@ -162,12 +198,16 @@ export default function SimulationPage() {
   const changed = useMemo(() => new Set(
     phase === "after" && f ? f.history.filter((h) => h.event === k && h.issue && (h.kind === "assignee" || h.kind === "rank"))
       .map((h) => h.issue!) : []), [f, k, phase]);
+  // what to look at in the step on screen: the affected tasks in step 2, the changed tasks in step 3
+  const affectedKeys = useMemo(() => f ? [...new Set(f.event.affected.flatMap((a) => a.issues))] : [], [f]);
+  const marked = useMemo(() => (phase === "aor" ? new Set(affectedKeys) : changed), [phase, affectedKeys, changed]);
   const thesisMethods = meta.data?.methods ?? [];
 
   return (
     <div className="page--full sim">
-      <div className="sim__setup">
-        <label className="field"><span>Proyek</span>
+      <Tour name="simulasi" steps={SIM_TOUR} />
+      <div className="sim__setup" data-tour="setup">
+        <label className="field"><span>Proyek <Info term="instance" /></span>
           <select className="select" value={project} onChange={(e) => { setProject(e.target.value); reset(); }}>
             {["Proyek sendiri", "Brandimarte (latih)", "Benchmark (latih)", "Benchmark (validasi)"].map((g) => (
               <optgroup key={g} label={g}>
@@ -175,18 +215,18 @@ export default function SimulationPage() {
               </optgroup>
             ))}
           </select></label>
-        <label className="field"><span>Kapasitas</span>
+        <label className="field"><span>Kapasitas <Info term="capacity" /></span>
           <select className="select" value={capacity} onChange={(e) => { setCapacity(Number(e.target.value)); reset(); }}>
             {(meta.data?.capacities ?? [1, 1.5, 2]).map((c) => <option key={c} value={c}>{angka(c)}</option>)}
           </select></label>
-        <label className="field"><span>Intensitas gangguan</span>
+        <label className="field"><span>Intensitas gangguan <Info term="intensity" /></span>
           <select className="select" value={intensity} onChange={(e) => { setIntensity(Number(e.target.value)); reset(); }}>
             {(meta.data?.intensities ?? [0.05, 0.15, 0.3]).map((c) => <option key={c} value={c}>{angka(c, 2)}</option>)}
           </select></label>
-        <label className="field"><span title="Seed validasi tesis 5000 dan 5001; seed uji 10000-10009 dan 11000-11004 ditolak">Seed episode</span>
+        <label className="field"><span title="Seed validasi tesis 5000 dan 5001; seed uji 10000-10009 dan 11000-11004 ditolak">Seed episode <Info term="seed" /></span>
           <input className="input mono" type="number" value={seed} style={{ width: 96 }}
                  onChange={(e) => { setSeed(Number(e.target.value)); reset(); }} /></label>
-        <label className="field"><span>λ (harga satu perubahan)</span>
+        <label className="field"><span>λ (change penalty) <Info term="lambda" /></span>
           <select className="select" value={lam} onChange={(e) => { setLam(Number(e.target.value)); reset(); }}>
             {(meta.data?.lambdas ?? [0.1, 0.3, 1, 3, 10, 30]).map((l) => (
               <option key={l} value={l}>{lambdaLabel(l)}{meta.data?.labelled_lambdas.includes(l) ? " (berlabel)" : ""}</option>))}
@@ -217,9 +257,9 @@ export default function SimulationPage() {
         ) : (
           <label className="check small" style={{ alignSelf: "center" }}>
             <input type="checkbox" checked={guard} onChange={(e) => { setGuard(e.target.checked); reset(); }} />
-            Pakai penjaga (tolak pilihan yang menaikkan J)</label>
+            Pakai guard (tolak pilihan yang menaikkan J) <Info term="guard" /></label>
         )}
-        <button className="btn btn--primary" onClick={() => start()} disabled={run.data?.status === "running"}>
+        <button className="btn btn--primary" onClick={() => start()} disabled={run.data?.status === "running"} data-tour="run">
           {run.data?.status === "running" ? <Spinner /> : <Play size={15} />}Jalankan</button>
         {mode !== "compare" && runId && <button className="btn btn--ghost" onClick={reset}><RotateCcw size={15} />Ulang</button>}
       </div>
@@ -239,10 +279,18 @@ export default function SimulationPage() {
         {done && events.data && (
           <>
             <button className="btn btn--ghost btn--sm" onClick={() => setK((x) => Math.max(0, x - 1))} disabled={k === 0} aria-label="Kejadian sebelumnya"><ChevronLeft size={16} /></button>
-            <button className="btn btn--ghost btn--sm" onClick={() => setPlaying((p) => !p)} aria-label={playing ? "Jeda" : "Putar"}>
+            <button className="btn btn--ghost btn--sm" onClick={togglePlay} aria-label={playing ? "Jeda" : "Putar langkah demi langkah"}
+                    title="Putar langkah demi langkah: ① → ② → ③ untuk setiap kejadian">
               {playing ? <Pause size={16} /> : <Play size={16} />}</button>
+            <select className="select select--sm" value={speed} onChange={(e) => setSpeed(Number(e.target.value))}
+                    aria-label="Kecepatan putar" title="Lama setiap langkah tampil">
+              <option value={6000}>sangat pelan</option><option value={3000}>pelan</option>
+              <option value={1500}>sedang</option><option value={700}>cepat</option>
+            </select>
             <button className="btn btn--ghost btn--sm" onClick={() => setK((x) => Math.min(n - 1, x + 1))} disabled={k >= n - 1} aria-label="Kejadian berikutnya"><ChevronRight size={16} /></button>
-            <div className="events" ref={strip} role="listbox" aria-label="Kejadian">
+            <span className="strip__label">Kejadian<br /><span>tangga = tingkat {results.find((r) => r.key === current)?.name ?? ""}</span></span>
+            <Info term="event" />
+            <div className="events" ref={strip} role="listbox" aria-label="Kejadian" data-tour="strip">
               {events.data.map((e) => {
                 const top = Math.max(0, ...e.levels.map((l) => l ?? 0));
                 return (
@@ -257,31 +305,34 @@ export default function SimulationPage() {
                 );
               })}
             </div>
-            <div className="segmented">
-              {PHASES.map((p) => <button key={p.value} className={phase === p.value ? "on" : ""} onClick={() => setPhase(p.value)}>{p.label}</button>)}
-            </div>
           </>
         )}
       </div>
 
-      <div className="sim__body">
-        <div className="sim__view">
+      <div className={`sim__body ${done && f && side === "log" ? "sim__body--wide" : ""}`}>
+        <div className="sim__view" data-tour="view">
           {!viewRun && (
             <div className="prose" style={{ maxWidth: 720 }}>
               <h2 className="page__title" style={{ marginBottom: 8 }}>Simulasi penjadwalan ulang</h2>
-              <p>Satu episode memutar gangguan dari model TAWOS pada proyek terpilih. Pada setiap kejadian,
-                gangguan diserap dulu oleh AOR, lalu metode memilih tingkat perbaikan untuk setiap gangguan:
-                L0 pertahankan AOR, L1 resequence, L2 reassign, atau L3 partial rescheduling.</p>
+              <p>Satu episode memutar gangguan dari model TAWOS pada proyek terpilih. Setiap kejadian punya tiga langkah:
+                ① jadwal sebelum gangguan; ② gangguan dimasukkan dan tugas yang terkena digeser seperlunya, belum
+                diperbaiki; ③ metode memilih tingkat perbaikan untuk setiap gangguan: L0 biarkan seperti langkah ②,
+                L1 resequence, L2 reassign, atau L3 partial rescheduling.</p>
               <p>Pilih <strong>Bandingkan metode</strong> untuk melihat delapan metode tesis pada gangguan yang sama,
-                atau salah satu mode Manual untuk menjadi pemilihnya sendiri dan membandingkan J Anda dengan ARLS-PPO.</p>
+                atau salah satu mode Manual untuk menjadi selector-nya sendiri dan membandingkan J Anda dengan ARLS-PPO.</p>
+              <p>Tab <strong>Log hitung</strong> di panel kanan menguraikan setiap angka, dari input sampai output. Nyalakan
+                {" "}<strong>Mode belajar</strong> di bilah atas untuk penjelasan istilah (ⓘ) dan tur halaman ini.</p>
               <p className="muted">Model yang dipakai adalah berkas yang sama dengan pengujian tesis (dicek dengan
                 SHA-256 terhadap dokumen kunci uji). Data uji tesis tidak dapat disimulasikan.</p>
             </div>
           )}
           {done && f && (
             <>
+              <Scene runId={viewRun!} results={results} current={current!} onPick={setCurrent} k={k} total={n}
+                     phase={phase} onPhase={(ph) => { setPlaying(false); setPhase(ph); }} event={f.event}
+                     focus={[...marked]} playing={playing} />
               {mode === "drag" && phase !== "after" && (
-                <div className="notice">Pindah ke fase "Sesudah perbaikan" untuk menggeser kartu pada kejadian ini.</div>
+                <div className="notice">Pindah ke langkah ③ "Sesudah perbaikan" untuk menggeser kartu pada kejadian ini.</div>
               )}
               {mode === "drag" && phase === "after" && current === manualKey && (
                 <div className="notice">Geser kartu To Do ke pengembang lain atau ke posisi lain di antrean.
@@ -290,21 +341,33 @@ export default function SimulationPage() {
               <Workspace issues={f.issues} assignees={f.assignees} epics={f.epics} history={f.history}
                          view={view} onView={setView} selected={selected} onSelect={setSelected}
                          pauses={f.pauses} ghost={f.ghost}
-                         ghostLabel={phase === "after" ? "posisi sesudah AOR" : "posisi sebelum gangguan"}
-                         t={f.t} event={f.event} changed={changed}
+                         ghostLabel={phase === "after" ? "posisi di langkah ② (gangguan masuk)" : "posisi di langkah ① (sebelum gangguan)"}
+                         t={f.t} event={f.event} changed={marked}
                          dragEnabled={mode === "drag" && phase === "after" && current === manualKey}
                          onMove={onMove} />
-              <h2 className="section-title">Perbandingan metode pada episode ini</h2>
+              <h2 className="section-title">Perbandingan metode untuk seluruh episode</h2>
               <MethodTable rows={results} current={current} onPick={(key) => setCurrent(key)} lam={lam} />
             </>
           )}
         </div>
         {done && f && (
-          <DecisionPanel frame={f} total={n} onOpenIssue={(key) => { setSelected(key); setView("form"); }}
-                         manualLevels={mode === "levels" && current === manualKey ? {
-                           pending, busy: run.data?.status !== "done",
-                           onChoose: (j, lv) => setPending((p) => ({ ...p, [j]: lv })), onApply: applyLevels,
-                         } : undefined} />
+          <div className="side">
+            <div className="side__tabs" role="tablist" aria-label="Panel kanan" data-tour="side">
+              <button role="tab" aria-selected={side === "decision"} className={side === "decision" ? "on" : ""}
+                      onClick={() => setSide("decision")}>Keputusan</button>
+              <button role="tab" aria-selected={side === "log"} className={side === "log" ? "on" : ""}
+                      onClick={() => setSide("log")} data-tour="log-tab">Log hitung</button>
+            </div>
+            {side === "decision" ? (
+              <DecisionPanel frame={f} total={n} onOpenIssue={(key) => { setSelected(key); setView("form"); }}
+                             manualLevels={mode === "levels" && current === manualKey ? {
+                               pending, busy: run.data?.status !== "done",
+                               onChoose: (j, lv) => setPending((p) => ({ ...p, [j]: lv })), onApply: applyLevels,
+                             } : undefined} />
+            ) : (
+              <NumberLog runId={viewRun!} methodKey={current!} k={k} />
+            )}
+          </div>
         )}
       </div>
       {meta.data && !meta.data.models_match_test_lock && (
