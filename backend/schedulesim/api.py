@@ -20,14 +20,18 @@ from . import ARLS_PPO, ROOT
 from .catalog import GROUP_CUSTOM, TEST_KEYS, Entry, benchmark_key, thesis_entries
 from .projection import (at_time_zero, build_project, history_until, issues_at,
                          reopened_until)
-from .runner import Runner, _payload_hash, work
-from .store import Store
+from .runner import RunLimit, Runner, _payload_hash, work
+from .store import EXAMPLES, Store
 
 GENERATED = ARLS_PPO / "latex" / "TemplateLatexLaporanTesis" / "chapters" / "chapter5" / "generated"
 LAMBDAS = [0.1, 0.3, 1.0, 3.0, 10.0, 30.0]
 CAPACITIES = [1.0, 1.5, 2.0]
 INTENSITIES = [0.05, 0.15, 0.3]
 VALIDATION_SEEDS = [5000, 5001]
+
+#: Limits of the public site (``SCHEDULESIM_PUBLIC=1``).
+PUBLIC_LIMITS = {"runs_per_client": 2, "pending": 12, "cache_bytes": 2 * 1024 ** 3,
+                 "max_tasks": 60, "max_devs": 10, "max_projects": 200}
 
 
 # ---------------------------------------------------------------------- helpers
@@ -114,10 +118,30 @@ def _submodule_commit() -> str | None:
 
 
 # ---------------------------------------------------------------------- app
+def _client(request: Request) -> str:
+    """Visitor address: Cloudflare puts the real one in ``CF-Connecting-IP``."""
+    return request.headers.get("cf-connecting-ip") or (request.client.host if request.client
+                                                        else "?")
+
+
+def _owner(request: Request) -> str | None:
+    """Hash of the browser token that marks the maker of a user project."""
+    import hashlib
+
+    token = request.headers.get("x-owner-token", "")
+    if len(token) < 16:
+        return None
+    return hashlib.sha256(token.encode()).hexdigest()
+
+
 def create_app(data_dir: str | Path | None = None, workers: int | None = None,
-               static_dir: str | Path | None = None) -> FastAPI:
+               static_dir: str | Path | None = None, public: bool | None = None) -> FastAPI:
     data_dir = Path(data_dir or os.environ.get("SCHEDULESIM_DATA", ROOT / "data"))
     workers = workers or int(os.environ.get("SCHEDULESIM_WORKERS", "4"))
+    if public is None:
+        public = os.environ.get("SCHEDULESIM_PUBLIC", "") == "1"
+    examples = {json.loads(f.read_text(encoding="utf-8"))["key"]
+                for f in EXAMPLES.glob("*.json")}
     static_dir = Path(static_dir or os.environ.get("SCHEDULESIM_STATIC",
                                                    ROOT / "frontend" / "dist"))
     state: dict = {}
@@ -125,7 +149,11 @@ def create_app(data_dir: str | Path | None = None, workers: int | None = None,
     @asynccontextmanager
     async def lifespan(app):
         state["store"] = Store(data_dir / "proyek.sqlite3")
-        state["runner"] = Runner(data_dir / "cache", workers=workers)
+        limits = PUBLIC_LIMITS if public else {}
+        state["runner"] = Runner(data_dir / "cache", workers=workers,
+                                 max_runs_per_client=limits.get("runs_per_client"),
+                                 max_pending=limits.get("pending"),
+                                 cache_bytes=limits.get("cache_bytes"))
         state["thesis"] = {e.key: e for e in thesis_entries()}
         state["test_keys"] = TEST_KEYS | _test_benchmark_keys()
         state["initial"] = {}
@@ -143,6 +171,10 @@ def create_app(data_dir: str | Path | None = None, workers: int | None = None,
     async def _invalid(request: Request, exc: ValueError):
         return CleanJSON({"detail": str(exc)}, status_code=422)
 
+    @app.exception_handler(RunLimit)
+    async def _busy(request: Request, exc: RunLimit):
+        return CleanJSON({"detail": str(exc)}, status_code=429)
+
     # ---------------------------------------------------------------- projects
     def entry(key: str) -> tuple[Entry, Any]:
         key = key.upper()
@@ -155,7 +187,15 @@ def create_app(data_dir: str | Path | None = None, workers: int | None = None,
         spec = state["store"].get(key)
         if spec is None:
             raise HTTPException(404, f"proyek {key} tidak ditemukan")
+        spec = {k: v for k, v in spec.items() if k != "_owner"}
         return Entry(key, spec.get("name", key), GROUP_CUSTOM, f"custom:{key}", True), spec
+
+    def changeable(key: str, spec: dict, request: Request) -> bool:
+        """Whether this visitor may edit the user project ``key``."""
+        if not public:
+            return True
+        return key not in examples and spec.get("_owner") is not None \
+            and spec.get("_owner") == _owner(request)
 
     def labels_of(source) -> dict:
         if isinstance(source, dict):
@@ -207,27 +247,30 @@ def create_app(data_dir: str | Path | None = None, workers: int | None = None,
             "test_seeds": [[10000, 10009], [11000, 11004]],
             "disruption_types": DISRUPTION_TYPES, "feature_names": list(FEATURE_NAMES),
             "models": files, "models_match_test_lock": ok,
-            "arls_ppo_commit": _submodule_commit(),
+            "arls_ppo_commit": _submodule_commit(), "public": bool(public),
+            "limits": PUBLIC_LIMITS if public else None,
         }
 
     @app.get("/api/projects")
-    def projects():
+    def projects(request: Request):
         out = [{"key": e.key, "name": e.name, "group": e.group, "editable": False}
                for e in state["thesis"].values()]
         for key, spec in state["store"].all().items():
             n = sum(len(ep.get("issues", [])) for ep in spec.get("epics", []))
             out.append({"key": key, "name": spec.get("name", key), "group": GROUP_CUSTOM,
-                        "editable": True, "n_tasks": n, "n_devs": len(spec.get("developers", []))})
+                        "editable": changeable(key, spec, request), "n_tasks": n,
+                        "n_devs": len(spec.get("developers", []))})
         return out
 
     @app.get("/api/projects/{key}")
-    def project(key: str, capacity: float = 1.5):
+    def project(key: str, request: Request, capacity: float = 1.5):
         e, source = entry(key)
         initial = initial_of(e, source, capacity)
         p = project_view(e, source, initial)
         tasks = at_time_zero(initial)
+        editable = e.editable and changeable(e.key, state["store"].get(e.key) or {}, request)
         return {"project": {"key": p.key, "name": p.name, "group": e.group, "source": p.source,
-                            "editable": e.editable, "capacity": capacity},
+                            "editable": editable, "capacity": capacity},
                 "epics": p.epics, "assignees": p.assignees,
                 "issues": issues_at(p, tasks, initial["entries"]),
                 "spec": source if isinstance(source, dict) else None}
@@ -235,37 +278,65 @@ def create_app(data_dir: str | Path | None = None, workers: int | None = None,
     def _check_spec(spec: dict) -> str:
         from arls_ppo import custom
 
+        if public:
+            lim = PUBLIC_LIMITS
+            n_tasks = sum(len(ep.get("issues", [])) for ep in spec.get("epics", []))
+            if n_tasks > lim["max_tasks"]:
+                raise ValueError(f"proyek di situs publik paling banyak {lim['max_tasks']} issue "
+                                 f"(ada {n_tasks})")
+            if len(spec.get("developers", [])) > lim["max_devs"]:
+                raise ValueError(f"proyek di situs publik paling banyak {lim['max_devs']} "
+                                 f"pengembang (ada {len(spec.get('developers', []))})")
         project = custom.parse(spec)
         custom.build_instance(project)
         return project.key
 
+    def _may_change(key: str, request: Request) -> dict:
+        """The stored project, if this visitor may change it (always, off the public site)."""
+        spec = state["store"].get(key)
+        if spec is None:
+            raise HTTPException(404, f"proyek {key} tidak ditemukan atau tidak bisa diubah")
+        if public:
+            if key in examples:
+                raise HTTPException(403, "proyek contoh hanya bisa dibaca di situs publik; "
+                                         "buat proyek sendiri untuk mencoba mengubahnya")
+            if spec.get("_owner") is None or spec.get("_owner") != _owner(request):
+                raise HTTPException(403, "proyek ini dibuat pengunjung lain; hanya pembuatnya "
+                                         "yang bisa mengubah atau menghapusnya")
+        return spec
+
     @app.post("/api/projects", status_code=201)
-    def create_project(spec: dict):
+    def create_project(spec: dict, request: Request):
+        owner = _owner(request)
+        if public and owner is None:
+            raise HTTPException(403, "token pembuat tidak ada; muat ulang halaman lalu coba lagi")
+        if public and len(state["store"].all()) >= PUBLIC_LIMITS["max_projects"]:
+            raise HTTPException(429, "batas banyak proyek di situs publik sudah tercapai")
         key = _check_spec(spec)
         if key in state["thesis"] or key in state["test_keys"] or state["store"].get(key):
             raise HTTPException(409, f"key {key} sudah dipakai")
-        state["store"].put(key, {**spec, "key": key})
+        state["store"].put(key, {**spec, "key": key, "_owner": owner})
         return {"key": key}
 
     @app.put("/api/projects/{key}")
-    def update_project(key: str, spec: dict):
+    def update_project(key: str, spec: dict, request: Request):
         key = key.upper()
-        if state["store"].get(key) is None:
-            raise HTTPException(404, f"proyek {key} tidak ditemukan atau tidak bisa diubah")
+        old = _may_change(key, request)
         _check_spec({**spec, "key": key})
-        state["store"].put(key, {**spec, "key": key})
+        state["store"].put(key, {**spec, "key": key, "_owner": old.get("_owner")})
         state["initial"] = {k: v for k, v in state["initial"].items() if k[0] != key}
         return {"key": key}
 
     @app.delete("/api/projects/{key}", status_code=204)
-    def delete_project(key: str):
-        if not state["store"].delete(key.upper()):
-            raise HTTPException(404, f"proyek {key} tidak ditemukan")
+    def delete_project(key: str, request: Request):
+        key = key.upper()
+        _may_change(key, request)
+        state["store"].delete(key)
         return Response(status_code=204)
 
     # ---------------------------------------------------------------- runs
     @app.post("/api/runs", status_code=202)
-    def start_run(req: RunRequest):
+    def start_run(req: RunRequest, request: Request):
         from arls_ppo.episode import METHODS, TEST_SEEDS
 
         e, source = entry(req.project)
@@ -297,7 +368,7 @@ def create_app(data_dir: str | Path | None = None, workers: int | None = None,
             raise ValueError("pilih paling sedikit satu metode")
         context = {"key": e.key, "name": e.name, "group": e.group, "editable": e.editable,
                    "source": source, **{k: v for k, v in base.items() if k != "project"}}
-        return {"run_id": state["runner"].submit(base, jobs, context)}
+        return {"run_id": state["runner"].submit(base, jobs, context, client=_client(request))}
 
     @app.get("/api/runs/{run_id}")
     def run_status(run_id: str):
@@ -364,6 +435,75 @@ def create_app(data_dir: str | Path | None = None, workers: int | None = None,
                 "pauses": ev[phase]["pauses"], "ghost": ghost,
                 "epics": p.epics, "assignees": p.assignees,
                 "meta": {**tr["meta"], "lam": ctx["lam"]}}
+
+    # ---------------------------------------------------------------- number log
+    def _names(tr, ctx) -> dict:
+        e = Entry(ctx["key"], ctx["name"], ctx["group"],
+                  ctx["source"] if not ctx["editable"] else f"custom:{ctx['key']}",
+                  ctx["editable"])
+        p = project_view(e, ctx["source"], tr["initial"])
+        return {"project": p.key, "devs": {str(a["id"]): a["name"] for a in p.assignees}}
+
+    @app.get("/api/runs/{run_id}/{key}/log")
+    def run_log(run_id: str, key: str):
+        from arls_ppo.episode import DISRUPTION_TYPES
+
+        tr, ctx, _ = traced(run_id, key)
+        x = tr.get("explain") or {}
+        events = []
+        for ev in tr["events"]:
+            events.append({"index": ev["index"], "time": ev["time"],
+                           "disruptions": [d["type"] for d in ev["disruptions"]],
+                           "levels": [s["used"] for s in ev["subs"]],
+                           "outcomes": [s["outcome"] for s in ev["subs"]],
+                           "tard_aor": ev["tard_aor"], "J_after_batch": ev["J_after_batch"],
+                           "changes": ev["changes"]})
+        meta = tr["meta"]
+        dis = x.get("disruptions", {})
+        return {"meta": {**meta, "lam": ctx["lam"]}, "names": _names(tr, ctx),
+                "disruption_types": DISRUPTION_TYPES, "input": x.get("input"),
+                "disruptions": dis, "events": events, "output": x.get("output"),
+                "result": {k: v for k, v in tr["result"].items() if not k.startswith("ms")},
+                "determinism": {
+                    "episode_seed": meta["seed"], "disruption_seed": dis.get("seed"),
+                    "rng": dis.get("generator"), "model_seed": meta.get("model_seed"),
+                    "model_files": meta.get("model_files", []),
+                    "arls_ppo_commit": _submodule_commit(),
+                    "cache_key": _payload_hash(state["runner"].payload(run_id, key) or {}),
+                    "not_deterministic": ["ms", "ms_keputusan", "ms_pemilih"]}}
+
+    @app.get("/api/runs/{run_id}/{key}/log/{k}")
+    def run_event_log(run_id: str, key: str, k: int):
+        tr, ctx, _ = traced(run_id, key)
+        if not 0 <= k < len(tr["events"]):
+            raise HTTPException(404, "kejadian tidak ada")
+        ev = tr["events"][k]
+        x = ev.get("explain") or {}
+        subs = []
+        for s in ev["subs"]:
+            sx = s.get("explain") or {}
+            subs.append({"j": s["j"], "type": s["type"], "affected": s["affected"],
+                         "requested": s["requested"], "used": s["used"],
+                         "outcome": s["outcome"], "mask": s.get("mask"),
+                         "J_before": s["J_before"], "J_after": s["J_after"],
+                         "changes_before": s.get("changes_before"),
+                         "changes_after": s["changes_after"],
+                         "features": sx.get("features"), "selector": sx.get("selector"),
+                         "levels": {str(lv): b for lv, b in (sx.get("levels") or {}).items()},
+                         "decision": sx.get("decision")})
+        return {"index": ev["index"], "time": ev["time"], "tard_before": ev["tard_before"],
+                "tard_aor": ev["tard_aor"], "tard_after": ev["tard_after"],
+                "J_after_batch": ev["J_after_batch"], "changes": ev["changes"],
+                "disruptions": x.get("disruptions", []), "manual": x.get("manual"),
+                "change_items": ev.get("change_items", []), "subs": subs,
+                "lam": ctx["lam"], "names": _names(tr, ctx)}
+
+    @app.post("/api/runs/{run_id}/{key}/ulang")
+    def run_again(run_id: str, key: str, request: Request):
+        out = state["runner"].rerun(run_id, key, client=_client(request))
+        if out is None:
+            raise HTTPException(404, "hasil metode ini tidak ditemukan")
+        return out
 
     # ---------------------------------------------------------------- results
     @app.get("/api/results")
