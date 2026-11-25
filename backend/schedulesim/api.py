@@ -531,7 +531,7 @@ def create_app(data_dir: str | Path | None = None, workers: int | None = None,
 
     # ---------------------------------------------------------------- frontend
     if static_dir.is_dir():
-        @app.get("/{path:path}", include_in_schema=False)
+        @app.api_route("/{path:path}", methods=["GET", "HEAD"], include_in_schema=False)
         def spa(path: str):
             target = static_dir / path
             if path and target.is_file():

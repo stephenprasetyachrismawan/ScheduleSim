@@ -120,3 +120,12 @@ def test_the_public_site_refuses_projects_that_are_too_big(public):
             "links": []}
     r = public.post("/api/projects", json=spec, headers={"X-Owner-Token": "c" * 32})
     assert r.status_code == 422 and "pengembang" in r.json()["detail"]
+
+
+def test_pages_answer_head_requests_too(client):
+    from schedulesim import ROOT
+
+    if not (ROOT / "frontend" / "dist" / "index.html").exists():
+        pytest.skip("frontend not built")
+    assert client.head("/").status_code == 200
+    assert client.head("/simulasi").status_code == 200
