@@ -132,13 +132,27 @@ export default function SimulationPage() {
                            queryFn: () => api.frame(viewRun!, current!, k, phase),
                            enabled: done && !!current && k < Math.max(n, 1), placeholderData: (p) => p });
 
+  // Playback goes step by step: (1) before, (2) disruptions entered, (3) after the repair, then
+  // the next event. The speed is the time each step stays on screen.
+  const [speed, setSpeed] = useState(3000);
+  const pos = useRef({ k, phase });
+  pos.current = { k, phase };
   useEffect(() => {
     if (!playing) return;
     const id = setInterval(() => {
-      setK((x) => { if (x + 1 >= n) { setPlaying(false); return x; } return x + 1; });
-    }, 1300);
+      const { k: kk, phase: ph } = pos.current;
+      if (ph === "before") setPhase("aor");
+      else if (ph === "aor") setPhase("after");
+      else if (kk + 1 < n) { setK(kk + 1); setPhase("before"); }
+      else setPlaying(false);
+    }, speed);
     return () => clearInterval(id);
-  }, [playing, n]);
+  }, [playing, n, speed]);
+  const togglePlay = () => {
+    if (!playing && k >= n - 1 && phase === "after") { setK(0); setPhase("before"); }
+    else if (!playing && phase === "after") { setPhase("before"); }
+    setPlaying((x) => !x);
+  };
   useEffect(() => {
     strip.current?.querySelector(".ev.on")?.scrollIntoView({ inline: "center", block: "nearest" });
   }, [k]);
@@ -184,6 +198,9 @@ export default function SimulationPage() {
   const changed = useMemo(() => new Set(
     phase === "after" && f ? f.history.filter((h) => h.event === k && h.issue && (h.kind === "assignee" || h.kind === "rank"))
       .map((h) => h.issue!) : []), [f, k, phase]);
+  // what to look at in the step on screen: the affected tasks in step 2, the changed tasks in step 3
+  const affectedKeys = useMemo(() => f ? [...new Set(f.event.affected.flatMap((a) => a.issues))] : [], [f]);
+  const marked = useMemo(() => (phase === "aor" ? new Set(affectedKeys) : changed), [phase, affectedKeys, changed]);
   const thesisMethods = meta.data?.methods ?? [];
 
   return (
@@ -262,8 +279,14 @@ export default function SimulationPage() {
         {done && events.data && (
           <>
             <button className="btn btn--ghost btn--sm" onClick={() => setK((x) => Math.max(0, x - 1))} disabled={k === 0} aria-label="Kejadian sebelumnya"><ChevronLeft size={16} /></button>
-            <button className="btn btn--ghost btn--sm" onClick={() => setPlaying((p) => !p)} aria-label={playing ? "Jeda" : "Putar"}>
+            <button className="btn btn--ghost btn--sm" onClick={togglePlay} aria-label={playing ? "Jeda" : "Putar langkah demi langkah"}
+                    title="Putar langkah demi langkah: ① → ② → ③ untuk setiap kejadian">
               {playing ? <Pause size={16} /> : <Play size={16} />}</button>
+            <select className="select select--sm" value={speed} onChange={(e) => setSpeed(Number(e.target.value))}
+                    aria-label="Kecepatan putar" title="Lama setiap langkah tampil">
+              <option value={6000}>sangat pelan</option><option value={3000}>pelan</option>
+              <option value={1500}>sedang</option><option value={700}>cepat</option>
+            </select>
             <button className="btn btn--ghost btn--sm" onClick={() => setK((x) => Math.min(n - 1, x + 1))} disabled={k >= n - 1} aria-label="Kejadian berikutnya"><ChevronRight size={16} /></button>
             <span className="strip__label">Kejadian<br /><span>tangga = tingkat {results.find((r) => r.key === current)?.name ?? ""}</span></span>
             <Info term="event" />
@@ -306,7 +329,8 @@ export default function SimulationPage() {
           {done && f && (
             <>
               <Scene runId={viewRun!} results={results} current={current!} onPick={setCurrent} k={k} total={n}
-                     phase={phase} onPhase={setPhase} event={f.event} />
+                     phase={phase} onPhase={(ph) => { setPlaying(false); setPhase(ph); }} event={f.event}
+                     focus={[...marked]} playing={playing} />
               {mode === "drag" && phase !== "after" && (
                 <div className="notice">Pindah ke langkah ③ "Sesudah perbaikan" untuk menggeser kartu pada kejadian ini.</div>
               )}
@@ -318,7 +342,7 @@ export default function SimulationPage() {
                          view={view} onView={setView} selected={selected} onSelect={setSelected}
                          pauses={f.pauses} ghost={f.ghost}
                          ghostLabel={phase === "after" ? "posisi di langkah ② (gangguan masuk)" : "posisi di langkah ① (sebelum gangguan)"}
-                         t={f.t} event={f.event} changed={changed}
+                         t={f.t} event={f.event} changed={marked}
                          dragEnabled={mode === "drag" && phase === "after" && current === manualKey}
                          onMove={onMove} />
               <h2 className="section-title">Perbandingan metode untuk seluruh episode</h2>

@@ -2,7 +2,7 @@
 // steps of that event. Every method meets the same disruptions; from the second event on, the
 // schedules differ because each method repaired the earlier events in its own way.
 import { useQueries } from "@tanstack/react-query";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Eye } from "lucide-react";
 import { api } from "../api";
 import { LEVEL_SHORT, Ladder } from "../components/atoms";
 import { angka } from "../format";
@@ -29,6 +29,9 @@ interface Props {
   phase: Phase;
   onPhase: (p: Phase) => void;
   event: EventDetail;
+  /** Issue keys to look at in this step (marked on the board and timeline too). */
+  focus?: string[];
+  playing?: boolean;
 }
 
 function caption(phase: Phase, k: number, name: string, isAor: boolean, ev: EventSummary | undefined): string {
@@ -55,7 +58,8 @@ function caption(phase: Phase, k: number, name: string, isAor: boolean, ev: Even
     + "Kotak putus-putus = posisi di langkah ②; kartu yang berubah diberi tanda.";
 }
 
-export default function Scene({ runId, results, current, onPick, k, total, phase, onPhase, event }: Props) {
+export default function Scene({ runId, results, current, onPick, k, total, phase, onPhase, event, focus = [],
+                                playing }: Props) {
   const rows = results.filter((r) => r.model_seed !== "mean");
   const evs = useQueries({
     queries: rows.map((r) => ({ queryKey: ["events", runId, r.key], queryFn: () => api.events(runId, r.key),
@@ -108,6 +112,18 @@ export default function Scene({ runId, results, current, onPick, k, total, phase
         ))}
       </div>
       <p className="scene__caption">{caption(phase, k, name, cur?.method === "aor", curEv)}</p>
+      {phase !== "before" && (
+        <div className="scene__look" aria-live="polite">
+          <Eye size={15} />
+          <span><b>Perhatikan:</b>{" "}
+            {phase === "aor"
+              ? (focus.length ? <>tugas yang terkena gangguan (A_j), diberi tanda di jadwal: </> : "tidak ada tugas yang terkena.")
+              : (focus.length ? <>tugas yang diubah {name} pada langkah ini: </> : `${name} tidak mengubah tugas apa pun pada kejadian ini.`)}
+            {focus.map((key) => <span key={key} className="chip">{key}</span>)}
+          </span>
+        </div>
+      )}
+      {playing && <div className="scene__playing">Memutar langkah demi langkah… tekan jeda (⏸) untuk berhenti.</div>}
     </section>
   );
 }
