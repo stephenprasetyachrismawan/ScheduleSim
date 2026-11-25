@@ -65,7 +65,7 @@ export const GLOSSARY: Record<string, Term> = {
   },
   aor: {
     term: "AOR, tingkat 0", en: "affected operations rescheduling",
-    body: "Gangguan diterapkan dan tugas yang terdampak digeser ke kanan seperlunya. Antrean dan assignee tidak diubah, jadi hasilnya selalu layak dan tanpa perubahan.",
+    body: "AOR punya dua peran. (1) Langkah ② setiap kejadian untuk semua metode: gangguan dimasukkan dan tugas yang terkena digeser ke kanan seperlunya; antrean dan assignee tidak diubah, jadi hasilnya selalu layak dan tanpa perubahan. (2) Nama metode pembanding \"AOR\" yang berhenti di langkah itu dan tidak pernah memperbaiki, sebagai patokan.",
     ref: "Subbab 3.3.3",
   },
   affected: {
@@ -76,7 +76,7 @@ export const GLOSSARY: Record<string, Term> = {
   // ---------------------------------------------------------------- repair
   ladder: {
     term: "Repair ladder", en: "repair ladder",
-    body: "Empat tingkat perbaikan yang jangkauannya makin luas: L0 pertahankan AOR, L1 Resequence, L2 Reassign, L3 Partial rescheduling.",
+    body: "Empat tingkat perbaikan yang jangkauannya makin luas: L0 tanpa perbaikan (jadwal dibiarkan seperti sesudah gangguan masuk), L1 Resequence, L2 Reassign, L3 Partial rescheduling.",
     ref: "Subbab 3.3.4",
   },
   L1: { term: "L1 Resequence", body: "Memajukan tugas A_j yang belum mulai ke posisi menurut tenggat terdekat di antrean pengembangnya sendiri.", ref: "Subbab 3.3.4" },
@@ -181,7 +181,7 @@ export const GLOSSARY: Record<string, Term> = {
   },
   rank: { term: "Rank", body: "Posisi tugas di antrean pengembangnya. Perubahan rank dihitung lewat n − LIS." },
   phases: {
-    term: "Tiga fase kejadian", body: "Sebelum gangguan → sesudah AOR (gangguan diterapkan, tingkat 0) → sesudah perbaikan (tingkat yang dipilih metode). Bayangan abu-abu di Timeline menunjukkan posisi pada fase sebelumnya.",
+    term: "Tiga langkah dalam satu kejadian", body: "① Sebelum gangguan: jadwal metode itu tepat sebelum gangguan datang. ② Gangguan masuk: gangguan dimasukkan dan tugas yang terkena digeser ke kanan seperlunya, tanpa mengubah antrean dan assignee; belum ada perbaikan (di naskah: tingkat 0 atau AOR). ③ Sesudah perbaikan: jadwal sesudah metode memilih tingkat perbaikan untuk setiap gangguan. Kotak putus-putus di Timeline = posisi pada langkah sebelumnya.",
   },
 };
 

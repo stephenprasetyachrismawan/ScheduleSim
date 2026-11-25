@@ -2,7 +2,7 @@ import { CheckSquare, ChevronDown, ChevronUp, ChevronsUp, Equal, Zap } from "luc
 import type { CSSProperties } from "react";
 import type { Issue, StatusName } from "../types";
 
-export const LEVEL_NAMES = ["Pertahankan AOR", "Resequence", "Reassign", "Partial rescheduling"];
+export const LEVEL_NAMES = ["Tanpa perbaikan", "Resequence", "Reassign", "Partial rescheduling"];
 export const LEVEL_SHORT = ["L0", "L1", "L2", "L3"];
 
 const STATUS_CLASS: Record<StatusName, string> = {

@@ -8,7 +8,7 @@ import type { Disruption, Frame, Sub } from "../types";
 
 const OUTCOME: Record<Sub["outcome"], string> = {
   dipakai: "dipakai", ditolak_penjaga: "ditolak guard", gagal: "operator gagal",
-  tingkat_0: "tingkat 0", aor: "AOR", manual_geser: "geser kartu",
+  tingkat_0: "tingkat 0", aor: "tanpa perbaikan", manual_geser: "geser kartu",
 };
 
 function describe(d: Disruption, devName: (id: number) => string, keyOf: (id: number) => string): string {
@@ -54,9 +54,9 @@ export default function DecisionPanel({ frame, total, onOpenIssue, manualLevels 
 
       <h4>Nilai <Info term="J" /></h4>
       <div className="kv">
-        <span>Tard/E sebelum gangguan</span><span>{angka(ev.tard_before, 3)}</span>
-        <span>Tard/E sesudah AOR</span><span>{angka(ev.tard_aor, 3)}</span>
-        <span>Tard/E sesudah perbaikan</span><span>{angka(ev.tard_after, 3)}</span>
+        <span>Tard/E sebelum gangguan (①)</span><span>{angka(ev.tard_before, 3)}</span>
+        <span>Tard/E sesudah gangguan masuk (②)</span><span>{angka(ev.tard_aor, 3)}</span>
+        <span>Tard/E sesudah perbaikan (③)</span><span>{angka(ev.tard_after, 3)}</span>
         <span>Perubahan U keputusan ini</span><span>{ev.changes}</span>
         <span>J keputusan = Tard/E + λ·U</span><span>{angka(ev.J_after_batch, 3)}</span>
       </div>

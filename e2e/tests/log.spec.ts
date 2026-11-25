@@ -53,3 +53,19 @@ test("learning mode adds tooltips and a tour only when it is on", async ({ page 
   await page.getByRole("button", { name: /Mode belajar/ }).click();
   await expect(page.locator(".info__btn")).toHaveCount(0);
 });
+
+test("choosing a method shows its schedule at the chosen event, step by step", async ({ page, request }) => {
+  const runId = await runMk01(page);
+  await page.locator(".ev").nth(1).click();
+  await page.locator(".mchip", { hasText: "Fixed-L3 + guard" }).click();
+  await expect(page.locator(".mchip.on")).toContainText("Fixed-L3 + guard");
+  await expect(page.locator(".decision .muted").first()).toContainText("Fixed-L3 + guard");
+  const frame = await (await request.get(`/api/runs/${runId}/fix3_g/frames/1/after`)).json();
+  await expect(page.locator(".decision .kv")).toContainText(
+    new Intl.NumberFormat("id-ID", { minimumFractionDigits: 3, maximumFractionDigits: 3 }).format(frame.event.J_after_batch));
+  await page.locator(".scene__step", { hasText: "Gangguan masuk" }).click();
+  await expect(page.locator(".scene__caption")).toContainText("belum diperbaiki");
+  await page.locator(".mchip", { hasText: "AOR (tanpa perbaikan)" }).click();
+  await page.locator(".scene__step", { hasText: "Sesudah perbaikan" }).click();
+  await expect(page.locator(".scene__caption")).toContainText("tidak pernah memperbaiki");
+});

@@ -12,7 +12,7 @@ const FLOW: { part: string; steps: string[] }[] = [
 ];
 
 const LEVEL_TEXT = [
-  "Tidak mengubah apa pun sesudah AOR. AOR menggeser tugas terdampak seperlunya dan mempertahankan antrean serta assignee setiap pengembang, jadi hasilnya selalu layak.",
+  "Tidak memperbaiki apa pun: jadwal dibiarkan seperti sesudah gangguan masuk (AOR menggeser tugas terdampak seperlunya dan mempertahankan antrean serta assignee setiap pengembang), jadi hasilnya selalu layak.",
   "Memajukan tugas A_j yang belum mulai ke posisi menurut tenggat terdekat di antrean pengembangnya.",
   "Memindahkan paling banyak tiga tugas A_j yang paling lambat ke pengembang dan posisi lain; pindahan diterima hanya bila keterlambatan total turun.",
   "Mengeluarkan paling banyak delapan tugas belum mulai di sekitar t, lalu menyisipkannya kembali satu per satu, tenggat terdekat dulu; hasilnya dibuang bila keterlambatan total naik.",

@@ -61,10 +61,13 @@ ScheduleSim tidak punya logika penjadwalan sendiri. Backend memanggil `arls_ppo`
   - Board: swimlane per assignee;
   - Form: statusbar, tab, dan riwayat;
   - Timeline: baris per assignee atau per epic, tenggat, dan dependensi.
-- **Simulasi gangguan.** Pilih proyek, kapasitas, intensitas, seed, λ, dan metode, lalu tekan
-  Jalankan. Strip kejadian menampilkan tingkat perbaikan yang dipakai (glyph tangga L0-L3). Setiap
-  kejadian bisa dilihat dalam tiga fase: sebelum gangguan, sesudah AOR, dan sesudah perbaikan.
-  Panel keputusan menampilkan:
+- **Simulasi gangguan.** Di atas jadwal ada panel yang menyebut apa yang sedang tampil: kejadian mana,
+  jadwal metode mana (tombol per metode berisi tingkat yang dipakai, U, dan Tard/E pada kejadian itu),
+  dan langkah mana: ① sebelum gangguan, ② gangguan masuk (tugas yang terkena digeser seperlunya, belum
+  diperbaiki; di naskah disebut tingkat 0 atau AOR), ③ sesudah perbaikan oleh metode itu. Metode
+  pembanding AOR ditulis "AOR (tanpa perbaikan)" karena ia berhenti di langkah ②. Cara pakai: pilih
+  proyek, kapasitas, intensitas, seed, λ, dan metode, lalu tekan Jalankan. Strip kejadian menampilkan
+  tingkat perbaikan yang dipakai metode terpilih (glyph tangga L0-L3). Panel keputusan menampilkan:
   - A_j;
   - peluang tiap tingkat dari kebijakan;
   - J tiap tingkat;
@@ -111,6 +114,8 @@ ScheduleSim tidak punya logika penjadwalan sendiri. Backend memanggil `arls_ppo`
 | Log hitung | J setiap tingkat dan LIS | Tur Mode belajar |
 |---|---|---|
 | ![Log hitung](docs/tangkapan/10_log_proses.png) | ![J setiap tingkat](docs/tangkapan/11_log_tingkat.png) | ![Tur](docs/tangkapan/12_tur.png) |
+
+![Pilih metode dan langkah pada satu kejadian](docs/tangkapan/13_pilih_metode.png)
 
 ## Menjalankan
 

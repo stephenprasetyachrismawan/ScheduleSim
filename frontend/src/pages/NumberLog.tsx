@@ -415,7 +415,7 @@ function SubDecision({ s, ev, nm, learned }: { s: SubLog; ev: EventLog; nm: Name
       </Step>
       <Step n="⑧" title="Coba setiap tingkat pada salinan jadwal, hitung J" term="J" code="cek_b1_b2.try_level, cek_b1_b2.score, count_changes">
         <p className="small">Untuk belajar, keempat tingkat dicoba di sini. Metode sendiri hanya mencoba tingkat yang diminta
-          {s.decision?.rule === "teacher" ? " (teacher memang mencoba semuanya)" : ""}. U dihitung terhadap jadwal sesudah AOR.</p>
+          {s.decision?.rule === "teacher" ? " (teacher memang mencoba semuanya)" : ""}. U dihitung terhadap jadwal di langkah ② (gangguan masuk, belum diperbaiki).</p>
         <table className="mini mini--wide lv-table"><thead><tr><th>Tingkat</th><th>Sah</th><th>Tard</th><th>Tard/E</th>
           <th>Pindah dev</th><th>Pindah posisi</th><th>U</th><th>λ·U</th><th>J</th></tr></thead>
           <tbody>{levels.map((b, lv) => (
@@ -460,7 +460,7 @@ function ProcessSection({ ev, ep, nm }: { ev: EventLog; ep: EpisodeLog; nm: Name
           <div key={i} className="effect">
             <div className="effect__head"><b>ξ{i + 1} · {nm.dis(e.type)}</b> <span className="muted small">jam {a4(e.time)}</span></div>
             {effectText(e, nm)}
-            {e.shifts.length > 0 && <Fold label={`${e.shifts.length} tugas bergeser karena gangguan ini (AOR)`}>
+            {e.shifts.length > 0 && <Fold label={`${e.shifts.length} tugas bergeser karena gangguan ini`}>
               <table className="mini"><thead><tr><th>Issue</th><th>Pengembang</th><th>Mulai</th><th>Selesai</th></tr></thead>
                 <tbody>{e.shifts.map((r) => <tr key={r.tugas}><td>{nm.key(r.tugas)}</td><td>{nm.dev(r.pengembang)}</td>
                   <td>{a4(r.mulai_sebelum)} → {a4(r.mulai_sesudah)}</td><td>{a4(r.C_sebelum)} → {a4(r.C_sesudah)}</td></tr>)}</tbody></table>
@@ -468,9 +468,9 @@ function ProcessSection({ ev, ep, nm }: { ev: EventLog; ep: EpisodeLog; nm: Name
           </div>
         ))}
       </Step>
-      <Step n="②" title="AOR (tingkat 0) menyerap semua gangguan" term="aor">
+      <Step n="②" title="Gangguan masuk ke jadwal, belum diperbaiki (tingkat 0, AOR)" term="aor">
         <Calc formula="Tard / E sebelum gangguan" result={a4(ev.tard_before)} />
-        <Calc formula="J sesudah AOR = Tard / E + λ × 0" result={a4(ev.tard_aor)} />
+        <Calc formula="J sesudah gangguan masuk = Tard / E + λ × 0" result={a4(ev.tard_aor)} />
       </Step>
       <Step n="③" title="Affected set A_j setiap gangguan" term="affected" code="dfjsp.env.repair_env.affected_tasks">
         {ev.disruptions.map((e, i) => (
@@ -582,7 +582,7 @@ function asText(ep: EpisodeLog, ev: EventLog | undefined, nm: Namer): string {
   if (ev) {
     L.push("", `Kejadian ${ev.index + 1}, jam ${ev.time}`);
     ev.disruptions.forEach((e, i) => L.push(`  ξ${i + 1} ${nm.dis(e.type)}; A${i + 1} = {${e.affected.map(nm.key).join(", ")}}`));
-    L.push(`  J sesudah AOR = ${ev.tard_aor}`);
+    L.push(`  J sesudah gangguan masuk (langkah 2) = ${ev.tard_aor}`);
     for (const s of ev.subs) {
       L.push(`  Sub-keputusan ${s.j + 1}: diminta ${s.requested}, dipakai ${s.used} (${s.outcome})`);
       if (s.selector?.probs) L.push(`    peluang = [${s.selector.probs.map((p) => p.toFixed(4)).join(", ")}]`);
