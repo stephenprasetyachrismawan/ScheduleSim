@@ -440,7 +440,7 @@ function SubDecision({ s, ev, nm, learned }: { s: SubLog; ev: EventLog; nm: Name
       </Step>
       <Step n="⑩" title="Hasil sub-keputusan">
         <Calc formula="J" subst={`${a4(s.J_before)} → ${a4(s.J_after)}`}
-              result={`${OUTCOME_TEXT[s.outcome] ?? s.outcome}, ${s.used === null ? "–" : LEVEL_SHORT[s.used]} dipakai, perubahan kumulatif ${s.changes_after}`} />
+              result={`${s.used === null ? "–" : LEVEL_SHORT[s.used]} (${OUTCOME_TEXT[s.outcome] ?? s.outcome}), perubahan kumulatif ${s.changes_after}`} />
         {ev.subs.length > s.j + 1 && <p className="small muted">Sub-keputusan berikutnya mulai dari jadwal ini.</p>}
       </Step>
     </>
